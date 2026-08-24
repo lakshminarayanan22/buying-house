@@ -92,8 +92,12 @@ def reference_fk(table: str, name: str, domain: ReferenceDomain) -> tuple:
             name=f"fk_{table}_{name}_reference_item",
             ondelete="RESTRICT",
         ),
+        # Named without repeating the table: the naming convention already prefixes
+        # "ck_<table>_", and Postgres truncates identifiers at 63 characters — a name that
+        # gets truncated no longer matches the metadata, and `alembic check` then reports
+        # drift on every run forever.
         CheckConstraint(
             f"{domain_col} = '{domain.value}'",
-            name=f"{table}_{name}_domain",
+            name=f"{name}_domain",
         ),
     )

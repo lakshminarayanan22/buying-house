@@ -1,4 +1,10 @@
-"""Organizations — the tenant boundary. Every tenant-scoped table carries org_id."""
+"""Organizations — the tenant boundary. Every tenant-scoped table carries org_id.
+
+Organization and User reference each other — an org names its owner, a user names its org —
+which is a genuine cycle that no table-creation order satisfies. The three organization ->
+app_user foreign keys are therefore marked use_alter, so they are added by ALTER TABLE once
+both tables exist.
+"""
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -60,11 +66,19 @@ class Organization(Base, TimestampMixin):
     verification_notes: Mapped[str | None] = mapped_column(Text)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     verified_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
+        Uuid(as_uuid=True),
+        ForeignKey(
+            "app_user.id", ondelete="SET NULL", use_alter=True,
+            name="fk_organization_verified_by_user_id_app_user",
+        ),
     )
 
     owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
+        Uuid(as_uuid=True),
+        ForeignKey(
+            "app_user.id", ondelete="SET NULL", use_alter=True,
+            name="fk_organization_owner_user_id_app_user",
+        ),
     )
     # §5.2: realistically ~70% of year-one suppliers are keyed in by our own team. Flagging it
     # matters because a profile the supplier never saw is a weaker signal than one they filled.
@@ -72,7 +86,11 @@ class Organization(Base, TimestampMixin):
         Boolean, nullable=False, default=False, server_default="false"
     )
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
+        Uuid(as_uuid=True),
+        ForeignKey(
+            "app_user.id", ondelete="SET NULL", use_alter=True,
+            name="fk_organization_created_by_user_id_app_user",
+        ),
     )
     # Set when the row came from an Excel bulk import, so a bad import can be traced or undone.
     import_batch_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), index=True)
