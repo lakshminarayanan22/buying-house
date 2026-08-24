@@ -1,6 +1,7 @@
 """Model package. Importing it registers every mapper, which Alembic autogenerate relies on."""
 from app.models.activity import ActivityLog, Note, Task
 from app.models.base import Base
+from app.models.change_request import ChangeRequest
 from app.models.brand import (
     BrandCategory,
     BrandExcludedCountry,
@@ -41,6 +42,7 @@ __all__ = [
     "BrandRequiredCertification",
     "BrandSupplierReveal",
     "BrandTargetMarket",
+    "ChangeRequest",
     "Contact",
     "Document",
     "ImportBatch",

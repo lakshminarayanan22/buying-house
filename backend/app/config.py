@@ -50,6 +50,14 @@ class Settings(BaseSettings):
     whatsapp_phone_number_id: str | None = None
     whatsapp_access_token: str | None = None
 
+    # --- Natural-language record editor (Super Admin only) ---
+    # Records only: DML against an allowlist. Schema changes stay in Alembic, where they are
+    # reviewed and reversible.
+    nlsql_backend: str = "stub"          # stub | claude
+    nlsql_model: str = "claude-opus-5"   # do not downgrade for cost without intent
+    anthropic_api_key: str | None = None
+    nlsql_max_rows: int = 200
+
     # i18n — keys exist from commit one; only English strings are populated today.
     default_language: str = "en"
     supported_languages: list[str] = ["en", "ta"]
