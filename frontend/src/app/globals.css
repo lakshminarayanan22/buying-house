@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+/* Design tokens. A dense, quiet palette: merchandisers look at these screens all day, and the
+   colour budget is spent on status, not decoration. */
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #fafbfc;
+  --border: #e3e6ea;
+  --border-strong: #cdd2d9;
+  --text: #10151c;
+  --text-muted: #5d6975;
+  --text-subtle: #8b95a1;
+  --accent: #2f4f7f;
+  --accent-hover: #263f66;
+  /* Foreground for solid accent fills. It inverts in dark mode — white on a light blue button
+     is unreadable, which is exactly what happens if this is hard-coded to #fff. */
+  --accent-fg: #ffffff;
+  --accent-soft: #eaf0f8;
+  --danger: #b3261e;
+  --danger-soft: #fdeceb;
+  --success: #1f6b45;
+  --success-soft: #e8f4ed;
+  --warning: #8a5a00;
+  --warning-soft: #fdf3e0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1116;
+    --surface: #161a21;
+    --surface-2: #1b2029;
+    --border: #262c36;
+    --border-strong: #363e4a;
+    --text: #e8ecf1;
+    --text-muted: #9aa5b1;
+    --text-subtle: #6b7683;
+    --accent: #7ba3dd;
+    --accent-hover: #96b6e6;
+    --accent-fg: #0e1116;
+    --accent-soft: #1a2534;
+    --danger: #f2837a;
+    --danger-soft: #2c1a19;
+    --success: #6cc094;
+    --success-soft: #16281f;
+    --warning: #e0ac54;
+    --warning-soft: #2a2015;
+  }
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numeric columns line up only if the digits are tabular — capacity and MOQ tables are read
+   by comparing them vertically. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+/* A focus ring that is visible in both themes without being loud. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
