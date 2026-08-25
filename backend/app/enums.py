@@ -181,3 +181,56 @@ class ActivityAction(StrEnum):
     DOCUMENT_UPLOAD = "DOCUMENT_UPLOAD"
     VERIFICATION_DECISION = "VERIFICATION_DECISION"
     BULK_IMPORT = "BULK_IMPORT"
+
+
+class ConnectionStatus(StrEnum):
+    """A brand's sourcing requirement, from first conversation to closed.
+
+    One connection covers whatever part of the chain the brand needs from us — sometimes only
+    garmenting, sometimes knitting and dyeing, sometimes the whole run.
+    """
+
+    SCOPING = "SCOPING"              # we know what they want, not yet who makes it
+    INTRODUCED = "INTRODUCED"        # suppliers named and revealed
+    SAMPLING = "SAMPLING"
+    QUOTED = "QUOTED"
+    CONFIRMED = "CONFIRMED"          # brand has committed
+    IN_PRODUCTION = "IN_PRODUCTION"
+    SHIPPED = "SHIPPED"
+    CLOSED = "CLOSED"                # delivered and commission settled
+    LOST = "LOST"
+
+
+class ChainStageStatus(StrEnum):
+    """One stage of one connection, as covered by one supplier."""
+
+    PROPOSED = "PROPOSED"            # we have a supplier in mind; brand has not seen them
+    INTRODUCED = "INTRODUCED"
+    SAMPLING = "SAMPLING"
+    QUOTED = "QUOTED"
+    AWARDED = "AWARDED"
+    IN_PRODUCTION = "IN_PRODUCTION"
+    SHIPPED = "SHIPPED"
+    COMPLETED = "COMPLETED"
+    DROPPED = "DROPPED"              # this supplier fell out; the connection carries on
+
+
+class CommissionBasis(StrEnum):
+    """How we get paid on a stage. It varies by deal, so it is recorded per stage.
+
+    SUPPLIER_COMMISSION  a percentage of what the supplier is paid
+    BRAND_MARKUP         we quote the brand above the supplier price and keep the difference
+    NONE                 a stage we coordinated but do not earn on
+    """
+
+    SUPPLIER_COMMISSION = "SUPPLIER_COMMISSION"
+    BRAND_MARKUP = "BRAND_MARKUP"
+    NONE = "NONE"
+
+
+class CommissionStatus(StrEnum):
+    NOT_DUE = "NOT_DUE"
+    PENDING = "PENDING"
+    INVOICED = "INVOICED"
+    RECEIVED = "RECEIVED"
+    WRITTEN_OFF = "WRITTEN_OFF"

@@ -2,6 +2,7 @@
 from app.models.activity import ActivityLog, Note, Task
 from app.models.base import Base
 from app.models.change_request import ChangeRequest
+from app.models.connection import Connection, ConnectionStage
 from app.models.brand import (
     BrandCategory,
     BrandExcludedCountry,
@@ -43,6 +44,8 @@ __all__ = [
     "BrandSupplierReveal",
     "BrandTargetMarket",
     "ChangeRequest",
+    "Connection",
+    "ConnectionStage",
     "Contact",
     "Document",
     "ImportBatch",

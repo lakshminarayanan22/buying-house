@@ -15,6 +15,8 @@ from app.services.taxonomy import add_alias, refresh_path
 
 # (code, name, [aliases])
 PROCESS_TYPES = [
+    # Ordered roughly as the chain runs, so a picker reads top-to-bottom the way the work does.
+    ("GINNING", "Ginning", ["ginner", "ginning mill", "cotton ginning", "gin"]),
     ("SPINNING", "Spinning", ["yarn manufacturing", "spinning mill"]),
     ("KNITTING_CIRCULAR", "Knitting - circular", ["circular knitting", "ckm", "tubular knitting"]),
     ("KNITTING_FLAT", "Knitting - flat", ["flat knitting", "collar knitting", "flat bed"]),
@@ -35,6 +37,11 @@ PROCESS_TYPES = [
     ("TRIMS_ACCESSORIES", "Trims & accessories", ["trims", "accessories", "labels", "buttons"]),
     ("PACKAGING", "Packaging", ["packing", "poly bags", "cartons"]),
     ("TESTING_LAB", "Testing lab", ["lab", "testing", "quality lab"]),
+    # Not everyone in the chain manufactures. A supplier who sources and sells fabric or yarn
+    # without owning a machine is still a supplier, and had nowhere to sit before.
+    ("YARN_TRADING", "Yarn trading", ["yarn trader", "yarn agent", "yarn supplier"]),
+    ("FABRIC_TRADING", "Fabric trading", ["fabric trader", "fabric supplier", "converter",
+                                          "fabric sourcing"]),
 ]
 
 # (code, name, parent_code, [aliases])

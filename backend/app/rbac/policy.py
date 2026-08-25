@@ -141,6 +141,11 @@ _INTERNAL_ONLY_TYPES = {
     "ImportBatch",
     "SupplierPerformance",
     "UnmappedTerm",
+    # The commercial record. A ConnectionStage holds supplier_price and brand_price side by
+    # side, and the gap between them is the margin — a brand user reading one row would learn
+    # exactly what we make. Internal-only until there is a deliberately redacted brand view.
+    "Connection",
+    "ConnectionStage",
 }
 
 # Fields on a supplier/brand record that constitute identity, withheld until a reveal.
