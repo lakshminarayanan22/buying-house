@@ -12,21 +12,19 @@ import * as React from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 import { api, getToken, logout as apiLogout } from "./api";
-import type { CurrentUser } from "./types";
-import { translate, type Language } from "./i18n";
+import type { Me } from "./types";
 
 interface SessionState {
-  user: CurrentUser | null;
+  user: Me | null;
   loading: boolean;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
-  t: (key: string) => string;
 }
 
 const SessionContext = React.createContext<SessionState | null>(null);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = React.useState<CurrentUser | null>(null);
+  const [user, setUser] = React.useState<Me | null>(null);
   const [loading, setLoading] = React.useState(true);
   const router = useRouter();
 
@@ -37,7 +35,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      setUser(await api.get<CurrentUser>("/auth/me"));
+      setUser(await api.get<Me>("/auth/me"));
     } catch {
       setUser(null);
     } finally {
@@ -59,13 +57,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     router.push("/login");
   }, [router]);
 
-  const t = React.useCallback(
-    (key: string) => translate(key, (user?.language_pref ?? "en") as Language),
-    [user?.language_pref],
-  );
 
   return (
-    <SessionContext.Provider value={{ user, loading, refresh, signOut, t }}>
+    <SessionContext.Provider value={{ user, loading, refresh, signOut }}>
       {children}
     </SessionContext.Provider>
   );
@@ -77,29 +71,16 @@ export function useSession(): SessionState {
   return context;
 }
 
-/** The landing route for a user, derived from the portal the server granted them. */
-export function homePathFor(user: CurrentUser | null): string {
-  if (!user) return "/login";
-  if (user.portals.includes("internal")) return "/internal";
-  if (user.portals.includes("supplier")) return "/supplier";
-  if (user.portals.includes("brand")) return "/brand";
-  return "/login";
-}
 
-/** Redirects to the login screen, or away from a portal the user has no claim to. */
-export function useRequirePortal(portal: "internal" | "brand" | "supplier") {
+/** Everyone who signs in sees the whole application, so this only guards for a session. */
+export function useRequireSession() {
   const { user, loading } = useSession();
   const router = useRouter();
   const pathname = usePathname();
 
   React.useEffect(() => {
-    if (loading) return;
-    if (!user) {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-      return;
-    }
-    if (!user.portals.includes(portal)) router.replace(homePathFor(user));
-  }, [loading, user, portal, router, pathname]);
+    if (!loading && !user) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+  }, [loading, user, router, pathname]);
 
   return { user, loading };
 }

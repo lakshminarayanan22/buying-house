@@ -7,7 +7,7 @@
  * separate origin and issues a bearer token; there is no cookie for it to set. A 401 clears
  * the session and bounces to the login screen, so a revoked user cannot linger in a stale UI.
  */
-import type { CurrentUser } from "./types";
+import type { Me } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 const TOKEN_KEY = "bh.session";
@@ -129,34 +129,16 @@ export const api = {
   del: <T,>(path: string) => request<T>(path, { method: "DELETE" }),
 };
 
-export async function login(email: string, password: string): Promise<CurrentUser> {
+export async function login(email: string, password: string): Promise<Me> {
   const session = await request<{ access_token: string }>("/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
     headers: { "Content-Type": "application/json" },
   });
   setToken(session.access_token);
-  return api.get<CurrentUser>("/auth/me");
+  return api.get<Me>("/auth/me");
 }
 
-export async function requestOtp(phone: string): Promise<string> {
-  const result = await request<{ detail: string }>("/auth/otp/request", {
-    method: "POST",
-    body: JSON.stringify({ phone }),
-    headers: { "Content-Type": "application/json" },
-  });
-  return result.detail;
-}
-
-export async function verifyOtp(phone: string, code: string): Promise<CurrentUser> {
-  const session = await request<{ access_token: string }>("/auth/otp/verify", {
-    method: "POST",
-    body: JSON.stringify({ phone, code }),
-    headers: { "Content-Type": "application/json" },
-  });
-  setToken(session.access_token);
-  return api.get<CurrentUser>("/auth/me");
-}
 
 export async function logout() {
   try {
@@ -164,4 +146,19 @@ export async function logout() {
   } finally {
     setToken(null);
   }
+}
+
+/** Multipart upload. Content-Type is left unset so the browser writes the boundary. */
+export async function uploadFile(form: FormData): Promise<unknown> {
+  const headers = new Headers();
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  const response = await fetch(`${BASE}/documents`, { method: "POST", body: form, headers });
+  if (!response.ok) {
+    let payload: unknown = null;
+    try { payload = await response.json(); } catch { /* non-JSON error body */ }
+    throw new ApiError(response.status, messageFrom(payload, "Upload failed"), payload);
+  }
+  return response.json();
 }

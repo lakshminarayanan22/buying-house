@@ -48,3 +48,30 @@ const STATUS_TONES: Record<string, string> = {
 export function statusTone(status: string | null | undefined): string {
   return STATUS_TONES[status ?? ""] ?? "slate";
 }
+
+export function money(value: number | null | undefined, currency = "USD"): string {
+  if (value === null || value === undefined) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency", currency, maximumFractionDigits: 0,
+  }).format(value);
+}
+
+/** "3 days ago" / "today" — the gone-quiet list is read in days, not dates. */
+export function daysAgo(days: number | null | undefined): string {
+  if (days === null || days === undefined) return "—";
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  return `${days} days ago`;
+}
+
+const DEAL_TONES: Record<string, string> = {
+  LEAD: "slate", NEGOTIATING: "amber", AGREED: "sky", IN_PROGRESS: "sky",
+  SHIPPED: "emerald", COMPLETED: "emerald", ON_HOLD: "amber", LOST: "rose",
+  DUE: "amber", INVOICED: "sky", RECEIVED: "emerald", NOT_DUE: "slate",
+  WRITTEN_OFF: "rose", PENDING: "slate", BLOCKED: "rose", DONE: "emerald", SKIPPED: "slate",
+  ACTIVE: "emerald", INACTIVE: "slate", BLACKLISTED: "rose",
+};
+
+export function dealTone(status: string | null | undefined): string {
+  return DEAL_TONES[status ?? ""] ?? "slate";
+}
