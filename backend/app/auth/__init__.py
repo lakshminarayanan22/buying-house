@@ -1,27 +1,18 @@
-"""Authentication: password hashing, OTP, JWT tokens, and the FastAPI principal dependency."""
-from app.auth.passwords import hash_password, hash_secret, verify_password, verify_secret
-from app.auth.tokens import (
-    TokenError,
-    TokenExpiredError,
-    create_invite_token,
-    create_resume_token,
-    create_session_token,
-    verify_invite_token,
-    verify_resume_token,
-    verify_session_token,
-)
+"""Password hashing. Three or four internal users, so this is all the auth surface there is."""
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 
-__all__ = [
-    "TokenError",
-    "TokenExpiredError",
-    "create_invite_token",
-    "create_resume_token",
-    "create_session_token",
-    "hash_password",
-    "hash_secret",
-    "verify_invite_token",
-    "verify_password",
-    "verify_resume_token",
-    "verify_secret",
-    "verify_session_token",
-]
+_hasher = PasswordHasher()
+
+
+def hash_password(plain: str) -> str:
+    return _hasher.hash(plain)
+
+
+def verify_password(hashed: str | None, plain: str) -> bool:
+    if not hashed:
+        return False
+    try:
+        return _hasher.verify(hashed, plain)
+    except (VerifyMismatchError, VerificationError, InvalidHashError):
+        return False

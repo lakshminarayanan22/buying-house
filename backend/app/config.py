@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     app_base_url: str = "http://localhost:3000"
 
     # Database. pgvector is enabled in the first migration so Phase 6 only has to add columns.
-    database_url: str = "postgresql+psycopg://bh:bh@localhost:5432/buyinghouse"
+    database_url: str = "postgresql+psycopg://bh:bh@localhost:5432/ecolink"
 
     # Redis / Celery — notification outbox dispatch, nightly performance rollups,
     # certificate-expiry sweeps.

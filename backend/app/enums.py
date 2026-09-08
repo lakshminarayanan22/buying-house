@@ -1,173 +1,113 @@
-"""Code-level controlled vocabularies.
+"""Controlled vocabularies that business logic branches on.
 
-These are enums, not master data, because business logic branches on them. Anything a
-Super Admin should be able to add without a deploy (process types, certifications, product
-categories, fibres...) lives in the `reference_item` table instead — see models/reference.py.
+Anything an admin should be able to extend without a deploy — processes, product categories,
+certifications, countries — lives in `reference_item` instead.
 """
 from enum import StrEnum
 
 
-class OrgType(StrEnum):
-    BRAND = "BRAND"
-    SUPPLIER = "SUPPLIER"
+class UserRole(StrEnum):
+    """Only Ecolink staff use this system, so the role model is deliberately two lines."""
+
+    ADMIN = "ADMIN"      # everything, including master data and user management
+    MEMBER = "MEMBER"    # everything except user management and master data
 
 
-class OrgStatus(StrEnum):
-    """§5.3 verification workflow. INVITED precedes the org ever logging in."""
-
-    INVITED = "INVITED"
-    DRAFT = "DRAFT"
-    SUBMITTED = "SUBMITTED"
-    UNDER_REVIEW = "UNDER_REVIEW"
-    NEEDS_INFO = "NEEDS_INFO"
-    VERIFIED = "VERIFIED"
-    REJECTED = "REJECTED"
-    SUSPENDED = "SUSPENDED"
-
-
-class SupplierTier(StrEnum):
-    """§5.2 progressive profiling. A supplier is usable at TIER_1 and only brand-facing at TIER_3."""
-
-    TIER_1_REGISTERED = "TIER_1_REGISTERED"
-    TIER_2_PROFILED = "TIER_2_PROFILED"
-    TIER_3_VERIFIED = "TIER_3_VERIFIED"
-
-
-class Role(StrEnum):
-    """§2. INTERNAL_* users have org_id NULL; brand/supplier users are always org-scoped."""
-
-    INTERNAL_SUPER_ADMIN = "INTERNAL_SUPER_ADMIN"
-    INTERNAL_MANAGEMENT = "INTERNAL_MANAGEMENT"
-    INTERNAL_SOURCING_HEAD = "INTERNAL_SOURCING_HEAD"
-    INTERNAL_MERCHANDISER = "INTERNAL_MERCHANDISER"
-    INTERNAL_QA = "INTERNAL_QA"
-    BRAND_ADMIN = "BRAND_ADMIN"
-    BRAND_USER = "BRAND_USER"
-    SUPPLIER_ADMIN = "SUPPLIER_ADMIN"
-    SUPPLIER_USER = "SUPPLIER_USER"
-
-    @property
-    def is_internal(self) -> bool:
-        return self.value.startswith("INTERNAL_")
-
-    @property
-    def side(self) -> "Side":
-        if self.is_internal:
-            return Side.INTERNAL
-        return Side.BRAND if self.value.startswith("BRAND_") else Side.SUPPLIER
-
-
-class Side(StrEnum):
-    """Which of the three portals a user belongs to."""
-
-    INTERNAL = "INTERNAL"
-    BRAND = "BRAND"
-    SUPPLIER = "SUPPLIER"
-
-
-class UserStatus(StrEnum):
-    INVITED = "INVITED"
+class CompanyStatus(StrEnum):
+    LEAD = "LEAD"            # we know of them, nothing agreed
     ACTIVE = "ACTIVE"
-    DISABLED = "DISABLED"
+    INACTIVE = "INACTIVE"
+    BLACKLISTED = "BLACKLISTED"
 
 
-class DataSource(StrEnum):
-    """Provenance of a capability/capacity claim.
+class DealRole(StrEnum):
+    """What a company does *in one particular deal*.
 
-    The agent (§10) must be able to discount what a factory told us about itself against what
-    we have actually observed. Impossible to retrofit once the rows exist, so it is on every
-    self-reported table from day one:
-
-      SELF_REPORTED    the supplier typed it into onboarding
-      INTERNAL_VERIFIED  a merchandiser or auditor confirmed it (physical visit, document)
-      OBSERVED         derived from real transactions (Phase 5 rollups)
+    A company is not a brand or a supplier — it depends on the deal. An Indian spinning mill is
+    the BUYER when we sell it Australian cotton and the SUPPLIER when it sells yarn onward.
+    Typing the company itself would make that impossible to express.
     """
 
-    SELF_REPORTED = "SELF_REPORTED"
-    INTERNAL_VERIFIED = "INTERNAL_VERIFIED"
-    OBSERVED = "OBSERVED"
+    BUYER = "BUYER"                    # pays for the output
+    SUPPLIER = "SUPPLIER"              # supplies the goods
+    PROCESSOR = "PROCESSOR"            # converts them — dyeing, finishing, garmenting
+    INPUT_SUPPLIER = "INPUT_SUPPLIER"  # supplies an input into someone else's process
+    OTHER = "OTHER"                    # logistics, testing, an agent
+
+
+class DealStatus(StrEnum):
+    LEAD = "LEAD"
+    NEGOTIATING = "NEGOTIATING"
+    AGREED = "AGREED"
+    IN_PROGRESS = "IN_PROGRESS"
+    SHIPPED = "SHIPPED"
+    COMPLETED = "COMPLETED"
+    ON_HOLD = "ON_HOLD"
+    LOST = "LOST"
+
+    @property
+    def is_open(self) -> bool:
+        return self in {
+            DealStatus.LEAD, DealStatus.NEGOTIATING, DealStatus.AGREED,
+            DealStatus.IN_PROGRESS, DealStatus.SHIPPED,
+        }
+
+
+class CommissionBasis(StrEnum):
+    """How we get paid on one party's leg of a deal.
+
+    PERCENTAGE  a cut of what that party pays or receives — the Australian cotton trade
+    MARGIN      we sell above what we pay and keep the difference — the finished-fabric sale
+    FIXED       a flat fee
+    NONE        a party we coordinate but do not earn from
+    """
+
+    PERCENTAGE = "PERCENTAGE"
+    MARGIN = "MARGIN"
+    FIXED = "FIXED"
+    NONE = "NONE"
+
+
+class CommissionStatus(StrEnum):
+    NOT_DUE = "NOT_DUE"
+    DUE = "DUE"
+    INVOICED = "INVOICED"
+    RECEIVED = "RECEIVED"
+    WRITTEN_OFF = "WRITTEN_OFF"
+
+
+class MilestoneStatus(StrEnum):
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    DONE = "DONE"
+    BLOCKED = "BLOCKED"
+    SKIPPED = "SKIPPED"
 
 
 class ReferenceDomain(StrEnum):
-    """The taxonomy namespaces held in `reference_item` (§3)."""
+    """Taxonomy namespaces. Broader than apparel, because the business is."""
 
-    PROCESS_TYPE = "PROCESS_TYPE"
-    PRODUCT_CATEGORY = "PRODUCT_CATEGORY"   # hierarchical, uses parent_id
-    FIBRE = "FIBRE"
-    FABRIC_CONSTRUCTION = "FABRIC_CONSTRUCTION"
-    FINISH_TYPE = "FINISH_TYPE"
+    PROCESS = "PROCESS"                  # growing, ginning, spinning, dyeing, garmenting…
+    PRODUCT = "PRODUCT"                  # raw cotton, yarn, fabric, t-shirts, chemicals
     CERTIFICATION = "CERTIFICATION"
-    COMPLIANCE_AUDIT_TYPE = "COMPLIANCE_AUDIT_TYPE"
-    MACHINERY_TYPE = "MACHINERY_TYPE"
     COUNTRY = "COUNTRY"
-    PORT = "PORT"
     CURRENCY = "CURRENCY"
-    INCOTERM = "INCOTERM"
     UOM = "UOM"
+    INCOTERM = "INCOTERM"
 
 
-class VerificationStatus(StrEnum):
-    """Per-document / per-certificate review state (§5.3)."""
+class DocumentKind(StrEnum):
+    """Deliberately coarse. A folder per deal is what was asked for, not a filing taxonomy."""
 
-    PENDING = "PENDING"
-    VERIFIED = "VERIFIED"
-    REJECTED = "REJECTED"
-    EXPIRED = "EXPIRED"
-
-
-class DocumentType(StrEnum):
-    UNIT_PHOTO = "UNIT_PHOTO"
-    GST_CERTIFICATE = "GST_CERTIFICATE"
-    PAN_CARD = "PAN_CARD"
-    IEC_CERTIFICATE = "IEC_CERTIFICATE"
-    BANK_DETAILS = "BANK_DETAILS"
-    CERTIFICATION = "CERTIFICATION"
-    COMPLIANCE_AUDIT_REPORT = "COMPLIANCE_AUDIT_REPORT"
-    FACTORY_PHOTO = "FACTORY_PHOTO"
-    FACTORY_VIDEO = "FACTORY_VIDEO"
-    VISIT_REPORT = "VISIT_REPORT"
-    VENDOR_MANUAL = "VENDOR_MANUAL"
-    QA_PROTOCOL = "QA_PROTOCOL"
-    TECH_PACK = "TECH_PACK"
-    REFERENCE_IMAGE = "REFERENCE_IMAGE"
+    BROCHURE = "BROCHURE"                # the factory profile PDF
+    PURCHASE_ORDER = "PURCHASE_ORDER"
+    INVOICE = "INVOICE"
+    PACKING_LIST = "PACKING_LIST"
+    CERTIFICATE = "CERTIFICATE"
+    CONTRACT = "CONTRACT"
+    TEST_REPORT = "TEST_REPORT"
+    PHOTO = "PHOTO"
     OTHER = "OTHER"
-
-
-class NotificationChannel(StrEnum):
-    IN_APP = "IN_APP"
-    EMAIL = "EMAIL"
-    WHATSAPP = "WHATSAPP"
-
-
-class NotificationStatus(StrEnum):
-    """Outbox pattern (§7): rows are written in the request, dispatched by a worker."""
-
-    PENDING = "PENDING"
-    SENDING = "SENDING"
-    SENT = "SENT"
-    FAILED = "FAILED"
-    CANCELLED = "CANCELLED"
-
-
-class CapacityUom(StrEnum):
-    PCS = "PCS"
-    KG = "KG"
-    METRES = "METRES"
-    YARDS = "YARDS"
-    DOZENS = "DOZENS"
-
-
-class SubcontractingPolicy(StrEnum):
-    NONE = "NONE"
-    DISCLOSED_ONLY = "DISCLOSED_ONLY"
-    ROUTINE = "ROUTINE"
-
-
-class MarketSegment(StrEnum):
-    MASS = "MASS"
-    MID = "MID"
-    PREMIUM = "PREMIUM"
-    LUXURY = "LUXURY"
 
 
 class ActivityAction(StrEnum):
@@ -175,62 +115,6 @@ class ActivityAction(StrEnum):
     UPDATE = "UPDATE"
     DELETE = "DELETE"
     STATUS_CHANGE = "STATUS_CHANGE"
+    UPLOAD = "UPLOAD"
     LOGIN = "LOGIN"
-    INVITE_SENT = "INVITE_SENT"
-    INVITE_ACCEPTED = "INVITE_ACCEPTED"
-    DOCUMENT_UPLOAD = "DOCUMENT_UPLOAD"
-    VERIFICATION_DECISION = "VERIFICATION_DECISION"
-    BULK_IMPORT = "BULK_IMPORT"
-
-
-class ConnectionStatus(StrEnum):
-    """A brand's sourcing requirement, from first conversation to closed.
-
-    One connection covers whatever part of the chain the brand needs from us — sometimes only
-    garmenting, sometimes knitting and dyeing, sometimes the whole run.
-    """
-
-    SCOPING = "SCOPING"              # we know what they want, not yet who makes it
-    INTRODUCED = "INTRODUCED"        # suppliers named and revealed
-    SAMPLING = "SAMPLING"
-    QUOTED = "QUOTED"
-    CONFIRMED = "CONFIRMED"          # brand has committed
-    IN_PRODUCTION = "IN_PRODUCTION"
-    SHIPPED = "SHIPPED"
-    CLOSED = "CLOSED"                # delivered and commission settled
-    LOST = "LOST"
-
-
-class ChainStageStatus(StrEnum):
-    """One stage of one connection, as covered by one supplier."""
-
-    PROPOSED = "PROPOSED"            # we have a supplier in mind; brand has not seen them
-    INTRODUCED = "INTRODUCED"
-    SAMPLING = "SAMPLING"
-    QUOTED = "QUOTED"
-    AWARDED = "AWARDED"
-    IN_PRODUCTION = "IN_PRODUCTION"
-    SHIPPED = "SHIPPED"
-    COMPLETED = "COMPLETED"
-    DROPPED = "DROPPED"              # this supplier fell out; the connection carries on
-
-
-class CommissionBasis(StrEnum):
-    """How we get paid on a stage. It varies by deal, so it is recorded per stage.
-
-    SUPPLIER_COMMISSION  a percentage of what the supplier is paid
-    BRAND_MARKUP         we quote the brand above the supplier price and keep the difference
-    NONE                 a stage we coordinated but do not earn on
-    """
-
-    SUPPLIER_COMMISSION = "SUPPLIER_COMMISSION"
-    BRAND_MARKUP = "BRAND_MARKUP"
-    NONE = "NONE"
-
-
-class CommissionStatus(StrEnum):
-    NOT_DUE = "NOT_DUE"
-    PENDING = "PENDING"
-    INVOICED = "INVOICED"
-    RECEIVED = "RECEIVED"
-    WRITTEN_OFF = "WRITTEN_OFF"
+    NOTE = "NOTE"

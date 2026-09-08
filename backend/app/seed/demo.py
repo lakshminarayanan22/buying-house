@@ -1,13 +1,14 @@
-"""Demo data: a handful of realistic Tiruppur/Erode suppliers and one brand.
+"""Demo data: Ecolink's two actual deals.
 
-Not fixtures for tests — this is for looking at the screens with something plausible on them,
-and for sanity-checking that the directory filters behave on data that resembles the real
-thing. Idempotent: re-running updates rather than duplicating.
+Both are real cases from the business, and they are here because between them they exercise
+everything the schema has to handle — a company that is a buyer on one deal, an input supplier
+who is nobody's factory, a percentage commission and a margin, and a chain that is two parties
+long in one case and three in the other.
 """
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -15,302 +16,271 @@ from sqlalchemy.orm import Session
 from app.auth import hash_password
 from app.db import SessionLocal
 from app.enums import (
-    CapacityUom,
-    DataSource,
-    OrgStatus,
-    OrgType,
-    ReferenceDomain,
-    Role,
-    UserStatus,
-    VerificationStatus,
+    CommissionBasis,
+    CommissionStatus,
+    CompanyStatus,
+    DealRole,
+    DealStatus,
+    MilestoneStatus,
+    ReferenceDomain as D,
+    UserRole,
 )
 from app.models import (
-    BrandSupplierReveal,
+    Company,
+    CompanyCertification,
+    CompanyClient,
+    CompanyProcess,
+    CompanyProduct,
     Contact,
-    Organization,
-    SupplierCapability,
-    SupplierCapabilityConstruction,
-    SupplierCapabilityFibre,
-    SupplierCertification,
-    SupplierMachine,
-    SupplierProcess,
-    SupplierProfile,
+    Deal,
+    DealMilestone,
+    DealParty,
     User,
 )
-from app.services import completeness
-from app.services.taxonomy import resolve
+from app.seed.taxonomy import resolve, seed_taxonomy
+from app.services import deals as svc
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger("demo")
 
-SUPPLIERS = [
-    {
-        "name": "Kovai Knits Pvt Ltd",
-        "city": "Tiruppur",
-        "state": "Tamil Nadu",
-        "gst": "33AABCK1234M1Z5",
-        "contact": ("R. Murugan", "+919000000101"),
-        "status": OrgStatus.VERIFIED,
-        "narrative": (
-            "Single jersey and pique knitting with in-house stitching. Known for heavy-GSM "
-            "french terry and consistent shade matching across large repeat orders for "
-            "European high-street buyers."
-        ),
-        "processes": [
-            ("Knitting - circular", 250000, "PCS", 1000, "PCS", 45, 10),
-            ("Stitching", 180000, "PCS", 500, "PCS", 40, 12),
-        ],
-        "capabilities": [
-            ("T-shirts", ["Cotton", "Organic cotton"], ["Single Jersey", "Pique"], 140, 220),
-            ("Polo shirts", ["Cotton"], ["Pique"], 180, 240),
-        ],
-        "machines": [("sinker machine", 24), ("overlock", 60), ("flatlock", 30)],
-        "certs": [("GOTS", "CU-820145", 400), ("OEKO-TEX Standard 100", "SH-025-2024", 220)],
-    },
-    {
-        "name": "Erode Processors Pvt Ltd",
-        "city": "Erode",
-        "state": "Tamil Nadu",
-        "gst": "33AAECE5678N1Z2",
-        "contact": ("S. Kumar", "+919000000102"),
-        "status": OrgStatus.VERIFIED,
-        "narrative": (
-            "Fabric dyeing and finishing house running soft-flow machines, with reactive and "
-            "disperse dyeing. Strong on dark shades and reproducible lab dips."
-        ),
-        "processes": [
-            ("Fabric dyeing", 400000, "KG", 500, "KG", 21, 7),
-            ("Finishing", 380000, "KG", 500, "KG", 14, 5),
-        ],
-        "capabilities": [("T-shirts", ["Cotton", "Viscose"], ["Single Jersey", "Interlock"], 120, 320)],
-        "machines": [("soft flow", 12), ("stenter", 3), ("compactor", 4)],
-        "certs": [("GOTS", "CU-771002", 150), ("ZDHC", "ZD-2025-8891", 300)],
-    },
-    {
-        "name": "Salem Spinners Ltd",
-        "city": "Salem",
-        "state": "Tamil Nadu",
-        "gst": "33AAFCS9012P1Z7",
-        "contact": ("A. Raja", "+919000000103"),
-        "status": OrgStatus.VERIFIED,
-        "narrative": (
-            "Ring-spun combed yarn from 20s to 40s counts, including organic and BCI cotton, "
-            "supplying knitters across Tiruppur."
-        ),
-        "processes": [("Spinning", 900000, "KG", 2000, "KG", 30, 14)],
-        "capabilities": [("T-shirts", ["Cotton", "Organic cotton", "BCI cotton"], [], 0, 0)],
-        "machines": [],
-        "certs": [("OCS", "OCS-4471", 260)],
-    },
-    {
-        "name": "Karur Home Textiles",
-        "city": "Karur",
-        "state": "Tamil Nadu",
-        "gst": "33AADCK3456Q1Z9",
-        "contact": ("K. Bala", "+919000000104"),
-        "status": OrgStatus.SUBMITTED,
-        "narrative": (
-            "Woven home textiles — bed linen and kitchen linen — with in-house weaving and "
-            "made-ups, mainly for European retail programmes."
-        ),
-        "processes": [
-            ("Weaving", 120000, "METRES", 3000, "METRES", 50, 21),
-            ("Stitching", 60000, "PCS", 1000, "PCS", 45, 18),
-        ],
-        "capabilities": [("Bed linen", ["Cotton", "Linen"], ["Plain weave", "Satin"], 110, 200)],
-        "machines": [("air jet loom", 48)],
-        "certs": [],
-    },
-    {
-        "name": "Coimbatore Garment Works",
-        "city": "Coimbatore",
-        "state": "Tamil Nadu",
-        "gst": "33AAGCC7890R1Z4",
-        "contact": ("M. Selvam", "+919000000105"),
-        "status": OrgStatus.DRAFT,
-        "narrative": "",
-        "processes": [("Stitching", 90000, "PCS", 800, "PCS", 42, None)],
-        "capabilities": [("Sweatshirts & hoodies", ["Cotton", "Polyester"], ["French Terry"], 240, 380)],
-        "machines": [("single needle", 120)],
-        "certs": [],
-    },
-]
 
-
-def _ref(db: Session, domain: ReferenceDomain, text: str):
+def _ref(db: Session, domain: D, text: str):
     item = resolve(db, domain, text)
     if item is None:
-        raise ValueError(f"demo data references unknown {domain} '{text}'")
+        raise SystemExit(f"{domain} {text!r} is not in the taxonomy")
     return item
 
 
+def _company(db: Session, name: str, **kw) -> Company:
+    existing = db.scalars(select(Company).where(Company.name == name)).first()
+    if existing:
+        return existing
+    company = Company(name=name, **kw)
+    db.add(company)
+    db.flush()
+    return company
+
+
 def seed_demo(db: Session) -> None:
-    india = _ref(db, ReferenceDomain.COUNTRY, "India")
+    seed_taxonomy(db)
 
-    for spec in SUPPLIERS:
-        org = db.scalars(
-            select(Organization).where(func.lower(Organization.legal_name) == spec["name"].lower())
-        ).first()
-        if org is None:
-            org = Organization(type=OrgType.SUPPLIER, legal_name=spec["name"])
-            db.add(org)
-            db.flush()
-
-        org.trade_name = spec["name"]
-        org.city = spec["city"]
-        org.state = spec["state"]
-        org.country_id = india.id
-        org.gst_no = spec["gst"]
-        org.status = spec["status"]
-        org.created_by_internal = True
-
-        profile = db.get(SupplierProfile, org.id) or SupplierProfile(org_id=org.id)
-        profile.capability_narrative = spec["narrative"] or None
-        profile.source = DataSource.INTERNAL_VERIFIED
-        db.add(profile)
-
-        if not db.scalars(select(Contact).where(Contact.org_id == org.id)).first():
-            name, phone = spec["contact"]
-            db.add(
-                Contact(org_id=org.id, name=name, phone=phone, whatsapp=phone, is_primary=True)
-            )
-
-        for proc_name, capacity, cap_uom, moq, moq_uom, lead, sample in spec["processes"]:
-            item = _ref(db, ReferenceDomain.PROCESS_TYPE, proc_name)
-            row = db.scalars(
-                select(SupplierProcess).where(
-                    SupplierProcess.org_id == org.id,
-                    SupplierProcess.process_type_id == item.id,
-                )
-            ).first() or SupplierProcess(org_id=org.id, process_type_id=item.id)
-            row.monthly_capacity_value = capacity
-            row.capacity_uom = CapacityUom(cap_uom)
-            row.min_order_qty = moq
-            row.moq_uom = CapacityUom(moq_uom)
-            row.standard_lead_time_days = lead
-            row.sample_lead_time_days = sample
-            row.source = DataSource.INTERNAL_VERIFIED
-            db.add(row)
-
-        for cat_name, fibres, constructions, gsm_min, gsm_max in spec["capabilities"]:
-            item = _ref(db, ReferenceDomain.PRODUCT_CATEGORY, cat_name)
-            cap = db.scalars(
-                select(SupplierCapability).where(
-                    SupplierCapability.org_id == org.id,
-                    SupplierCapability.product_category_id == item.id,
-                )
-            ).first() or SupplierCapability(org_id=org.id, product_category_id=item.id)
-            cap.gsm_min = gsm_min or None
-            cap.gsm_max = gsm_max or None
-            cap.source = DataSource.INTERNAL_VERIFIED
-            db.add(cap)
-            db.flush()
-
-            for fibre_name in fibres:
-                fibre = _ref(db, ReferenceDomain.FIBRE, fibre_name)
-                if not db.scalars(
-                    select(SupplierCapabilityFibre).where(
-                        SupplierCapabilityFibre.capability_id == cap.id,
-                        SupplierCapabilityFibre.fibre_id == fibre.id,
-                    )
-                ).first():
-                    db.add(SupplierCapabilityFibre(capability_id=cap.id, fibre_id=fibre.id))
-
-            for construction_name in constructions:
-                construction = _ref(db, ReferenceDomain.FABRIC_CONSTRUCTION, construction_name)
-                if not db.scalars(
-                    select(SupplierCapabilityConstruction).where(
-                        SupplierCapabilityConstruction.capability_id == cap.id,
-                        SupplierCapabilityConstruction.construction_id == construction.id,
-                    )
-                ).first():
-                    db.add(
-                        SupplierCapabilityConstruction(
-                            capability_id=cap.id, construction_id=construction.id
-                        )
-                    )
-
-        for machine_name, count in spec["machines"]:
-            machine_type = _ref(db, ReferenceDomain.MACHINERY_TYPE, machine_name)
-            if not db.scalars(
-                select(SupplierMachine).where(
-                    SupplierMachine.org_id == org.id,
-                    SupplierMachine.machine_type_id == machine_type.id,
-                )
-            ).first():
-                db.add(
-                    SupplierMachine(
-                        org_id=org.id, machine_type_id=machine_type.id, count=count,
-                        source=DataSource.INTERNAL_VERIFIED,
-                    )
-                )
-
-        for cert_name, number, days_valid in spec["certs"]:
-            cert_type = _ref(db, ReferenceDomain.CERTIFICATION, cert_name)
-            row = db.scalars(
-                select(SupplierCertification).where(
-                    SupplierCertification.org_id == org.id,
-                    SupplierCertification.certification_id == cert_type.id,
-                )
-            ).first() or SupplierCertification(
-                org_id=org.id, certification_id=cert_type.id, certificate_no=number
-            )
-            row.issued_on = date.today() - timedelta(days=365)
-            row.valid_till = date.today() + timedelta(days=days_valid)
-            # Verified on purpose: an unverified certificate satisfies no filter, so demo data
-            # that left these PENDING would make the certification facet look broken.
-            row.verification_status = VerificationStatus.VERIFIED
-            row.source = DataSource.INTERNAL_VERIFIED
-            db.add(row)
-
-        db.flush()
-        completeness.refresh_supplier(db, org)
-
-    # One brand, plus a login for it, so the identity-redaction behaviour can be seen.
-    brand = db.scalars(
-        select(Organization).where(Organization.legal_name == "Northwind Apparel Ltd")
-    ).first()
-    if brand is None:
-        brand = Organization(
-            type=OrgType.BRAND, legal_name="Northwind Apparel Ltd",
-            trade_name="Northwind", city="London", status=OrgStatus.VERIFIED,
-        )
-        db.add(brand)
+    user = db.scalars(select(User).where(User.email == "ops@ecolink.example")).first()
+    if user is None:
+        user = User(name="Ecolink Ops", email="ops@ecolink.example", role=UserRole.ADMIN,
+                    password_hash=hash_password("ChangeMe123!"))
+        db.add(user)
         db.flush()
 
-    for email, role, name in [
-        ("buyer@northwind.co", Role.BRAND_ADMIN, "Helen Marsh"),
-        ("merch@buyinghouse.co", Role.INTERNAL_MERCHANDISER, "Priya Ramesh"),
-        ("sourcing@buyinghouse.co", Role.INTERNAL_SOURCING_HEAD, "Anand Iyer"),
+    if db.scalars(select(Deal)).first() is not None:
+        log.info("demo deals already present")
+        return
+
+    au, inn, jp = (_ref(db, D.COUNTRY, c) for c in ("Australia", "India", "Japan"))
+    usd = _ref(db, D.CURRENCY, "USD")
+
+    # ---------------------------------------------------------------- companies
+    farm = _company(
+        db, "Darling Downs Cotton Growers", legal_name="Darling Downs Cotton Co-operative Ltd",
+        country_id=au.id, city="Dalby", sells=True, status=CompanyStatus.ACTIVE,
+        capacity_notes="Roughly 9,000 MT of lint a season across the co-operative.",
+        notes="Introduced through the Australian cotton growers' association.",
+    )
+    mill = _company(
+        db, "Sri Vaari Spinning Mills", legal_name="Sri Vaari Spinning Mills Pvt Ltd",
+        country_id=inn.id, city="Coimbatore",
+        # The point of the whole redesign: this company BUYS our cotton and SELLS yarn.
+        buys=True, sells=True, status=CompanyStatus.ACTIVE,
+        capacity_notes="52,000 spindles. About 900 MT of combed yarn a month.",
+        machinery_notes="Rieter and LMW ring frames; 2 blow rooms; auto-coners.",
+        moq_notes="Minimum 20 MT per count for a fresh order.",
+        payment_terms="30 days from bill of lading",
+    )
+    jptech = _company(
+        db, "Kaimei Cooling Technologies", legal_name="Kaimei Cooling Technologies K.K.",
+        country_id=jp.id, city="Osaka", sells=True, status=CompanyStatus.ACTIVE,
+        notes="Supplies the cooling finish chemistry and licenses the application method.",
+    )
+    dyer = _company(
+        db, "Erode Processors", legal_name="Erode Processors Pvt Ltd",
+        country_id=inn.id, city="Erode", sells=True, status=CompanyStatus.ACTIVE,
+        capacity_notes="About 12 MT of knitted fabric a day across soft-flow machines.",
+        machinery_notes="12 soft-flow dyeing machines, 3 stenters, 4 compactors.",
+        moq_notes="500 kg per shade.",
+        lead_time_notes="21 days for dyeing and finishing.",
+    )
+    brand = _company(
+        db, "Northwind Apparel", legal_name="Northwind Apparel Ltd",
+        country_id=_ref(db, D.COUNTRY, "United Kingdom").id, city="London",
+        buys=True, sells=False, status=CompanyStatus.ACTIVE,
+        payment_terms="60 days from delivery, LC at sight for first order",
+        quality_requirements="AQL 2.5. Shade continuity across the run. OEKO-TEX on all fabric.",
+    )
+
+    db.add_all([
+        Contact(company_id=farm.id, name="Alan Prentice", designation="Export manager",
+                email="alan@ddcotton.example", phone="+61 400 000 111", is_primary=True),
+        Contact(company_id=mill.id, name="R. Senthilkumar", designation="Purchase head",
+                phone="+91 90000 00201", whatsapp="+91 90000 00201", is_primary=True),
+        Contact(company_id=jptech.id, name="Hiro Tanaka", designation="Business development",
+                email="tanaka@kaimei.example", is_primary=True),
+        Contact(company_id=dyer.id, name="S. Kumar", designation="Managing partner",
+                phone="+91 90000 00102", whatsapp="+91 90000 00102", is_primary=True),
+        Contact(company_id=brand.id, name="Helen Marsh", designation="Sourcing manager",
+                email="helen@northwind.example", is_primary=True),
+    ])
+
+    for company, processes in [
+        (farm, ["Cotton growing", "Ginning"]),
+        (mill, ["Spinning"]),
+        (jptech, ["Chemical / treatment supply"]),
+        (dyer, ["Fabric dyeing", "Finishing"]),
     ]:
-        if not db.scalars(select(User).where(User.email == email)).first():
-            db.add(
-                User(
-                    org_id=brand.id if role.side.value == "BRAND" else None,
-                    role=role, name=name, email=email,
-                    password_hash=hash_password("ChangeMe123!"), status=UserStatus.ACTIVE,
-                )
-            )
+        for name in processes:
+            db.add(CompanyProcess(company_id=company.id, process_id=_ref(db, D.PROCESS, name).id))
 
-    # Reveal exactly one supplier to the brand, so the directory shows both states side by side.
-    kovai = db.scalars(
-        select(Organization).where(Organization.legal_name == "Kovai Knits Pvt Ltd")
-    ).first()
-    if kovai and not db.scalars(
-        select(BrandSupplierReveal).where(
-            BrandSupplierReveal.brand_org_id == brand.id,
-            BrandSupplierReveal.supplier_org_id == kovai.id,
-        )
-    ).first():
-        db.add(
-            BrandSupplierReveal(
-                brand_org_id=brand.id, supplier_org_id=kovai.id, brand_sees_supplier=True,
-                reason="Shortlisted for the AW26 knitwear programme",
-            )
-        )
+    for company, products in [
+        (farm, ["Raw cotton"]), (mill, ["Yarn"]),
+        (jptech, ["Chemicals & treatments"]), (dyer, ["Finished fabric"]),
+        (brand, ["T-shirts", "Polo shirts"]),
+    ]:
+        for name in products:
+            db.add(CompanyProduct(company_id=company.id, product_id=_ref(db, D.PRODUCT, name).id))
+
+    for company, certs in [
+        (farm, ["myBMP", "BCI"]), (mill, ["OEKO-TEX Standard 100", "ISO 9001"]),
+        (dyer, ["GOTS", "OEKO-TEX Standard 100", "ZDHC"]),
+    ]:
+        for name in certs:
+            db.add(CompanyCertification(
+                company_id=company.id, certification_id=_ref(db, D.CERTIFICATION, name).id
+            ))
+
+    db.add_all([
+        CompanyClient(company_id=dyer.id, client_name="Decathlon", is_current=True),
+        CompanyClient(company_id=dyer.id, client_name="Marks & Spencer", is_current=False),
+        CompanyClient(company_id=mill.id, client_name="Arvind Ltd", is_current=True),
+    ])
+    db.flush()
+
+    # ------------------------------------------------- deal 1: Australian cotton -> Indian mill
+    cotton = Deal(
+        deal_no=svc.next_deal_no(db),
+        title="Australian cotton — 240 MT to Sri Vaari",
+        description=(
+            "Darling Downs supplies 240 MT of lint FOB Brisbane. Sri Vaari buys through us; "
+            "we take a commission on the shipped value."
+        ),
+        product_id=_ref(db, D.PRODUCT, "Raw cotton").id,
+        currency_id=usd.id,
+        incoterm_id=_ref(db, D.INCOTERM, "FOB").id,
+        status=DealStatus.IN_PROGRESS,
+        target_ship_date=date.today() + timedelta(days=5),
+        owner_user_id=user.id,
+    )
+    db.add(cotton)
+    db.flush()
+
+    grower_leg = DealParty(
+        deal_id=cotton.id, company_id=farm.id, role=DealRole.SUPPLIER, sequence=1,
+        process_id=_ref(db, D.PROCESS, "Cotton growing").id,
+        qty=240, uom="MT", unit_price=1850, value=444000,
+        commission_basis=CommissionBasis.PERCENTAGE, commission_pct=1.5,
+        commission_status=CommissionStatus.INVOICED,
+        invoiced_on=date.today() - timedelta(days=9),
+        ship_date=date.today() + timedelta(days=5),
+    )
+    mill_leg = DealParty(
+        deal_id=cotton.id, company_id=mill.id, role=DealRole.BUYER, sequence=2,
+        qty=240, uom="MT", value=444000, commission_basis=CommissionBasis.NONE,
+    )
+    for leg in (grower_leg, mill_leg):
+        svc.refresh_commission(leg)
+    db.add_all([grower_leg, mill_leg])
+    for m, offset, status in [
+        ("Contract signed", -30, MilestoneStatus.DONE),
+        ("Bales pressed and lot numbers issued", -12, MilestoneStatus.DONE),
+        ("Container booked", -4, MilestoneStatus.DONE),
+        ("Vessel sails from Brisbane", 5, MilestoneStatus.IN_PROGRESS),
+        ("Documents to mill", 8, MilestoneStatus.PENDING),
+        ("Commission received", 25, MilestoneStatus.PENDING),
+    ]:
+        db.add(DealMilestone(
+            deal_id=cotton.id, name=m, sequence=len(m),
+            planned_date=date.today() + timedelta(days=offset), status=status,
+            actual_date=date.today() + timedelta(days=offset)
+            if status == MilestoneStatus.DONE else None,
+            owner_user_id=user.id,
+        ))
+
+    # ------------------------------- deal 2: Japanese cooling finish -> Tiruppur -> brand
+    cooling = Deal(
+        deal_no=svc.next_deal_no(db),
+        title="Kaimei cooling finish — fabric programme for Northwind",
+        description=(
+            "Kaimei ships the cooling chemistry to Erode, who dye and finish knitted fabric to "
+            "it. We market the finished fabric to Northwind at a margin over the processed cost."
+        ),
+        product_id=_ref(db, D.PRODUCT, "Finished fabric").id,
+        currency_id=usd.id,
+        status=DealStatus.NEGOTIATING,
+        target_ship_date=date.today() + timedelta(days=70),
+        owner_user_id=user.id,
+    )
+    db.add(cooling)
+    db.flush()
+
+    cooling_legs = [
+        DealParty(
+            deal_id=cooling.id, company_id=jptech.id, role=DealRole.INPUT_SUPPLIER, sequence=1,
+            process_id=_ref(db, D.PROCESS, "Chemical / treatment supply").id,
+            qty=400, uom="LTR", unit_price=42, value=16800,
+            commission_basis=CommissionBasis.NONE,
+            notes="Chemistry shipped direct to Erode. Kaimei invoices us, we recover in the fabric price.",
+        ),
+        DealParty(
+            deal_id=cooling.id, company_id=dyer.id, role=DealRole.PROCESSOR, sequence=2,
+            process_id=_ref(db, D.PROCESS, "Fabric dyeing").id,
+            qty=18000, uom="KG", unit_price=2.90, value=52200,
+            commission_basis=CommissionBasis.PERCENTAGE, commission_pct=4,
+            commission_status=CommissionStatus.DUE,
+            ship_date=date.today() + timedelta(days=60),
+        ),
+        # The margin leg: we buy the finished fabric in at 5.05 and sell it on at 5.60.
+        DealParty(
+            deal_id=cooling.id, company_id=brand.id, role=DealRole.BUYER, sequence=3,
+            qty=18000, uom="KG", unit_price=5.05, resale_unit_price=5.60, value=100800,
+            commission_basis=CommissionBasis.MARGIN,
+            commission_status=CommissionStatus.NOT_DUE,
+            ship_date=date.today() + timedelta(days=70),
+        ),
+    ]
+    for leg in cooling_legs:
+        svc.refresh_commission(leg)
+    db.add_all(cooling_legs)
+    for m, offset, status in [
+        ("Cooling finish sample approved by Northwind", -6, MilestoneStatus.DONE),
+        ("Price confirmed with Erode", 3, MilestoneStatus.IN_PROGRESS),
+        ("Chemistry shipped from Osaka", 14, MilestoneStatus.PENDING),
+        ("Bulk dyeing starts", 32, MilestoneStatus.PENDING),
+        ("Fabric ex-Erode", 60, MilestoneStatus.PENDING),
+    ]:
+        db.add(DealMilestone(
+            deal_id=cooling.id, name=m, sequence=len(m),
+            planned_date=date.today() + timedelta(days=offset), status=status,
+            actual_date=date.today() + timedelta(days=offset)
+            if status == MilestoneStatus.DONE else None,
+            owner_user_id=user.id,
+        ))
+
+    db.flush()
+
+    # The cotton deal was worked on this week; the cooling deal has been sitting for three.
+    cotton.last_activity_at = datetime.now(timezone.utc) - timedelta(days=1)
+    cooling.last_activity_at = datetime.now(timezone.utc) - timedelta(days=23)
 
     db.commit()
-    log.info("demo data: %s suppliers, 1 brand, 3 logins (password ChangeMe123!)", len(SUPPLIERS))
+    log.info("seeded %s companies and %s deals (login: ops@ecolink.example / ChangeMe123!)",
+         db.scalar(select(func.count(Company.id))), db.scalar(select(func.count(Deal.id))))
 
 
 def main() -> None:

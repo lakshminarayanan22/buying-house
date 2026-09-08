@@ -1,77 +1,30 @@
-"""Model package. Importing it registers every mapper, which Alembic autogenerate relies on."""
-from app.models.activity import ActivityLog, Note, Task
+"""Thirteen tables. Importing this registers every mapper, which Alembic relies on."""
 from app.models.base import Base
-from app.models.change_request import ChangeRequest
-from app.models.connection import Connection, ConnectionStage
-from app.models.brand import (
-    BrandCategory,
-    BrandExcludedCountry,
-    BrandProfile,
-    BrandRequiredCertification,
-    BrandTargetMarket,
+from app.models.company import (
+    Company,
+    CompanyCertification,
+    CompanyClient,
+    CompanyProcess,
+    CompanyProduct,
+    Contact,
 )
-from app.models.document import Document
-from app.models.notification import (
-    NotificationOutbox,
-    NotificationPreference,
-    NotificationTemplate,
-)
-from app.models.organization import Contact, ImportBatch, Organization, OrgInvite
-from app.models.reference import ReferenceAlias, ReferenceItem, UnmappedTerm, normalise_term
-from app.models.supplier import (
-    SupplierCapability,
-    SupplierCapabilityConstruction,
-    SupplierCapabilityFibre,
-    SupplierCapacityCalendar,
-    SupplierCertification,
-    SupplierCompliance,
-    SupplierExportMarket,
-    SupplierMachine,
-    SupplierPerformance,
-    SupplierProcess,
-    SupplierProfile,
-    SupplierReference,
-)
-from app.models.user import BrandSupplierReveal, OtpChallenge, User
+from app.models.core import ActivityLog, Document, User
+from app.models.deal import Deal, DealMilestone, DealParty
+from app.models.reference import ReferenceItem
 
 __all__ = [
     "ActivityLog",
     "Base",
-    "BrandCategory",
-    "BrandExcludedCountry",
-    "BrandProfile",
-    "BrandRequiredCertification",
-    "BrandSupplierReveal",
-    "BrandTargetMarket",
-    "ChangeRequest",
-    "Connection",
-    "ConnectionStage",
+    "Company",
+    "CompanyCertification",
+    "CompanyClient",
+    "CompanyProcess",
+    "CompanyProduct",
     "Contact",
+    "Deal",
+    "DealMilestone",
+    "DealParty",
     "Document",
-    "ImportBatch",
-    "Note",
-    "NotificationOutbox",
-    "NotificationPreference",
-    "NotificationTemplate",
-    "Organization",
-    "OrgInvite",
-    "OtpChallenge",
-    "ReferenceAlias",
     "ReferenceItem",
-    "SupplierCapability",
-    "SupplierCapabilityConstruction",
-    "SupplierCapabilityFibre",
-    "SupplierCapacityCalendar",
-    "SupplierCertification",
-    "SupplierCompliance",
-    "SupplierExportMarket",
-    "SupplierMachine",
-    "SupplierPerformance",
-    "SupplierProcess",
-    "SupplierProfile",
-    "SupplierReference",
-    "Task",
-    "UnmappedTerm",
     "User",
-    "normalise_term",
 ]
