@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.enums import (
@@ -182,10 +182,17 @@ def open_milestones(db: Session, within_days: int = 14) -> list[dict]:
 
 
 def pipeline(db: Session) -> list[dict]:
-    """Every deal by status, with the money attached."""
+    """Every deal by status, with the money attached.
+
+    Value counts buyer legs only. Summing every party in a chain would count the same goods
+    once per hop and inflate the pipeline by the length of the chain.
+    """
+    from app.enums import DealRole
+
     rows = db.execute(
         select(Deal.status, func.count(func.distinct(Deal.id)),
-               func.coalesce(func.sum(DealParty.value), 0),
+               func.coalesce(func.sum(
+                   case((DealParty.role == DealRole.BUYER, DealParty.value), else_=0)), 0),
                func.coalesce(func.sum(DealParty.commission_amount), 0))
         .join(DealParty, DealParty.deal_id == Deal.id, isouter=True)
         .group_by(Deal.status)

@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     # Database. pgvector is enabled in the first migration so Phase 6 only has to add columns.
     database_url: str = "postgresql+psycopg://bh:bh@localhost:5432/ecolink"
 
+    # Uploaded files. A folder per deal on local disk — see api/documents.py.
+    file_storage_dir: str = "~/buying-house-files"
+
     # Redis / Celery — notification outbox dispatch, nightly performance rollups,
     # certificate-expiry sweeps.
     redis_url: str = "redis://localhost:6379/0"
