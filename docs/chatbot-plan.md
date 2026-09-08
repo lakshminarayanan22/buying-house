@@ -1,19 +1,171 @@
 # Ecolink chatbot — revised plan
 
-A conversational layer over the Ecolink database and document store. The core of the original
-plan is intact: **classify the question, route it, and answer from the right source.** What
-changes is *how* the routing happens, *what* supplier matching actually is, and *where* the
-vectors live.
-
-Nothing here is built yet. This is the design to argue with before any of it is written.
+> This document is self-contained. Part I describes the application the chatbot sits on top of;
+> Part II is the plan itself. Skip to Part II if you already know the system.
 
 ---
 
-## 1. What I would change, and why
+# Part I — The application
+
+## 1. What Ecolink does
+
+Ecolink is a **buying house**: it connects organisations across the textile supply chain and
+earns a commission or a margin on what flows between them. It does not manufacture and does not
+hold stock. The product is the connection and the coordination around it.
+
+Two live examples, both real, and between them they define the shape of the system:
+
+**Australian cotton into Indian spinning mills.**
+Ecolink has the relationship with growers in Australia, where demand from Indian mills is rising.
+A mill buys through Ecolink and Ecolink takes a percentage of the shipped value. Two parties:
+grower sells, mill buys.
+
+**Japanese cooling technology through a Tiruppur dye house.**
+A Japanese company ships a cooling-finish chemistry to a processing partner in Tiruppur, who dyes
+and finishes fabric to it. Ecolink then markets the finished fabric to brands, earning either a
+commission or a margin built into the selling price. Three parties: the chemistry supplier, the
+processor, the buying brand.
+
+Neither fits a "brand ↔ supplier" model, and that observation drives the entire schema.
+
+## 2. Who uses it
+
+**Only Ecolink staff — three or four people.** No supplier, brand or partner ever logs in;
+Ecolink keys everything in themselves.
+
+This removes an entire category of complexity that an earlier version of this system carried:
+no tenant isolation, no supplier or brand portals, no invitations, no OTP login, no
+identity-reveal gating between the two sides, no per-user filtering of anything. Every signed-in
+user sees the whole application.
+
+Two roles exist: `ADMIN` (adds users and edits master data) and `MEMBER` (everything else).
+
+## 3. The central design decision
+
+**A company has no type.** There is no "brand" flag and no "supplier" flag, because an Indian
+spinning mill *buys* Australian cotton and *sells* its yarn onward. Labelling it either way makes
+one of those two facts unrecordable.
+
+Instead, **role lives on the deal**: `deal_party.role` is one of `BUYER`, `SUPPLIER`,
+`PROCESSOR`, `INPUT_SUPPLIER` or `OTHER`, per deal. A company carries only `buys` and `sells`
+booleans as hints for filtering a list.
+
+Everything else follows from this. Companies and deals meet in exactly one table —
+`deal_party` — and that join is where quantities, prices, commission and ship dates live.
+
+## 4. The schema — 13 tables
+
+**Taxonomy (1)**
+
+| Table | Holds |
+|---|---|
+| `reference_item` | Every controlled list, namespaced by `domain`, with an `aliases` text array so "sinker", "process house" and "cooling tech" resolve. 73 seeded values across 7 domains: PROCESS (17), PRODUCT (12), CERTIFICATION (12), COUNTRY (14), CURRENCY (6), UOM (6), INCOTERM (6). Self-referencing for product hierarchy. |
+
+**Companies (6)**
+
+| Table | Holds |
+|---|---|
+| `company` | Name, city, country, `buys`/`sells`, status, tax id, payment terms, quality requirements. Capacity, machinery, MOQ and lead time are **free text**, not structured — the real detail lives in the factory brochure. |
+| `contact` | People at a company. Most never log in; they are phone and WhatsApp numbers. |
+| `company_process` | One row per chain stage performed, with monthly capacity, MOQ, uom, lead time. The searchable layer. |
+| `company_product` | What they make — raw cotton, yarn, t-shirts, chemicals. |
+| `company_certification` | Names only. No expiry dates, no certificate PDFs, no verification workflow. |
+| `company_client` | Brands they work for, past and present. Free text — these are Decathlon and M&S, not Ecolink records. |
+
+**Deals (3)**
+
+| Table | Holds |
+|---|---|
+| `deal` | `deal_no` (DL-2026-0001), title, product, currency, incoterm, status, target ship date, owner, and `last_activity_at` — which powers the "gone quiet" view. |
+| `deal_party` | One row per company per deal: role, process, qty, uom, unit price, resale unit price, value, and the commission fields. **Commission lives here, not on the deal**, because the basis genuinely varies per leg. |
+| `deal_milestone` | The follow-up list. A dated checklist per deal, optionally pinned to one party. Not a full time-and-action calendar. |
+
+**Shared (3)**
+
+| Table | Holds |
+|---|---|
+| `document` | Files, attached to a deal or a company or both. A deal's "folder" is every document carrying its `deal_id`. Includes `extracted_text`, currently empty — reserved for retrieval. |
+| `activity_log` | One row per change, with before/after JSON. Also what makes "who changed this" answerable. |
+| `app_user` | Three or four internal accounts. |
+
+Totals: **13 tables, 158 columns, 26 foreign keys, 8 named check constraints.**
+
+## 5. How commission works
+
+Recorded per `deal_party`, with four bases:
+
+- **`PERCENTAGE`** — a cut of that leg's value. The Australian cotton trade: 1.5% of $444,000.
+- **`MARGIN`** — the gap between what Ecolink pays and what it sells at, times quantity. The
+  finished fabric: ($5.60 − $5.05) × 18,000 kg.
+- **`FIXED`** — a flat fee, typed rather than derived.
+- **`NONE`** — a party coordinated but not earned from.
+
+**One deal can carry several bases at once.** The cooling-finish programme has a percentage from
+the dye house *and* a margin on the fabric sale, which is precisely why commission sits on the
+party rather than the deal.
+
+Commission then moves through `NOT_DUE → DUE → INVOICED → RECEIVED`. Ecolink records what is
+owed and chases it themselves; the system does not raise invoices.
+
+## 6. Rules the database enforces
+
+Eight check constraints, each one a business rule that would otherwise be a comment in a service
+method:
+
+- A margin needs both prices, and the resale price cannot be below cost
+- A percentage basis needs a percentage
+- An invoiced commission needs an amount *(this caught a real bug in the demo seed)*
+- `UNIQUE (deal, company, role)` — a mill can be supplier and processor on one deal, but not
+  supplier twice
+- A lost deal needs a reason
+- A completed milestone needs a date
+- A document must belong to a deal or a company
+- `UNIQUE (company name, city)`
+
+## 7. What is built
+
+**Backend** — Python 3.11, FastAPI, SQLAlchemy 2.0, Alembic, PostgreSQL. 22 endpoints:
+auth, companies (filtered by process, product, certification, country, buy/sell side), deals
+with parties and milestones, document upload and download, taxonomy, and one dashboard endpoint.
+24 tests. Uploads go to local disk, a folder per deal, with content-hash filenames.
+
+**Frontend** — Next.js 16 (App Router), TypeScript, Tailwind v4. Six routes: `/login`, `/`
+(dashboard), `/deals`, `/deals/[id]`, `/companies`, `/companies/[id]`. One application, one kind
+of user, no portal split.
+
+**The dashboard is three questions**, chosen because they are what actually gets asked each
+morning:
+
+1. **What is shipping this week** — with anything already late flagged
+2. **Who owes us commission** — grouped by the company to phone, with days outstanding
+3. **Which deals have gone quiet** — open deals untouched for a fortnight
+
+Plus follow-ups due across every live deal.
+
+## 8. Scale
+
+Small, and it matters for every decision in Part II.
+
+| | Now | Plausible in a year |
+|---|---|---|
+| Companies | 5–10 | 30–50 |
+| Deals | 2–3 per month | 5–20 per month |
+| Users | 3–4 | 3–6 |
+| Documents | A handful of brochures | Perhaps 100 |
+
+The business is still finalising its first deals. **Every design choice below assumes this
+scale and says so where it matters** — several would be wrong at 100× the size, and the
+thresholds for revisiting are stated rather than implied.
+
+---
+
+# Part II — The chatbot plan
+
+## 9. What I would change, and why
 
 Three corrections up front, because they reshape the rest.
 
-### 1.1 Supplier matching is not a RAG problem
+### 9.1 Supplier matching is not a RAG problem
 
 This is the important one.
 
@@ -42,7 +194,7 @@ falls back to searching brochure text. That is the same hard-filter-then-rerank 
 Phase 6 matching plan used, and it is right for the same reason: **filters decide eligibility,
 similarity only decides order.**
 
-### 1.2 Do not build a classifier — use tool calling
+### 9.2 Do not build a classifier — use tool calling
 
 The plan describes a classification step that decides between database / supplier matching /
 technical, then dispatches. That is a step to build, tune, monitor, and get wrong.
@@ -55,7 +207,7 @@ classifier has to pick one and be half wrong.
 **Revised:** no classifier. One system prompt, four tools, and the routing falls out of the tool
 descriptions. Those descriptions become the thing worth tuning.
 
-### 1.3 Split "database query" into read and write
+### 9.3 Split "database query" into read and write
 
 The plan says database queries "do the changes after review confirmation". But most database
 questions are **reads**: *how much commission is outstanding, which deals are open, what did we
@@ -74,7 +226,7 @@ prediction; re-check the rows at confirm time so nothing is applied over someone
 
 ---
 
-## 2. Architecture
+## 10. Architecture
 
 ```
                     ┌──────────────────────────────────┐
@@ -100,9 +252,9 @@ SDK's tool runner. No separate service.
 
 ---
 
-## 3. The four tools
+## 11. The four tools
 
-### 3.1 `ask_database` — read
+### 11.1 `ask_database` — read
 
 Natural language in, a read-only answer out.
 
@@ -116,7 +268,7 @@ Natural language in, a read-only answer out.
 The schema is small enough to put in the prompt in full — around 4,000 tokens, generated from
 SQLAlchemy metadata so it can never drift from the real tables.
 
-### 3.2 `change_database` — write, with preview
+### 11.2 `change_database` — write, with preview
 
 The only tool that mutates. Reuses the previously-built and tested design:
 
@@ -135,7 +287,7 @@ The only tool that mutates. Reuses the previously-built and tested design:
 
 Restricted to `ADMIN` users. With three or four people that is a real boundary, not theatre.
 
-### 3.3 `find_company` — structured filter, semantic fallback
+### 11.3 `find_company` — structured filter, semantic fallback
 
 ```
 find_company(
@@ -163,7 +315,7 @@ find_company(
 Returning the *reason* matters more than returning the match. Three named companies with no
 justification is a worse answer than one with a reason you can check.
 
-### 3.4 `answer_from_docs` — technical, grounded
+### 11.4 `answer_from_docs` — technical, grounded
 
 Retrieval over the document corpus, with a hard rule: **answer only from retrieved text, and say
 so when there isn't enough.**
@@ -183,7 +335,7 @@ deciding what goes in before building the retrieval layer.
 
 ---
 
-## 4. Where the vectors live
+## 12. Where the vectors live
 
 ### Recommendation: pgvector, not Weaviate Cloud — for now
 
@@ -251,7 +403,7 @@ Either works. Voyage is less to run; local is one less vendor. Worth a decision,
 
 ---
 
-## 5. Ingestion
+## 13. Ingestion
 
 Runs when a document is uploaded — the existing `POST /api/documents` gains a step.
 
@@ -271,7 +423,7 @@ upload → store file → extract text → chunk → embed → write document_ch
 
 ---
 
-## 6. Guardrails
+## 14. Guardrails
 
 Nobody outside Ecolink uses this system, which removes an entire class of concern — there is no
 tenant boundary to leak across and no per-user retrieval filtering to get right. What remains:
@@ -292,7 +444,7 @@ parsed-AST validation and not in the prompt.
 
 ---
 
-## 7. Phasing
+## 15. Phasing
 
 Ordered so the risky part comes last and each phase is useful alone.
 
@@ -306,7 +458,7 @@ and nothing can be damaged by it.
 
 **Phase 3 — documents.**
 `document_chunk`, the ingestion pipeline, `answer_from_docs`. Gated on the technical corpus
-actually existing (§3.4).
+actually existing (§11.4).
 
 **Phase 4 — writes.**
 `change_database` with preview and confirm. Last on purpose: it is the only tool that can lose
@@ -319,7 +471,7 @@ worth doing when someone wants the tools outside the app, not before.
 
 ---
 
-## 8. Cost
+## 16. Cost
 
 At current volume, this is not a budget line.
 
@@ -339,7 +491,7 @@ wastes far more of your attention than the token saving is worth.
 
 ---
 
-## 9. How to tell whether it works
+## 17. How to tell whether it works
 
 Build a list of **30 real questions** before writing the chatbot — questions actually asked in
 the office, with the answer you would expect. Split across the four tools. Run the set after
@@ -355,7 +507,7 @@ Track both explicitly. General "is it good?" impressions will not catch either.
 
 ---
 
-## 10. Open questions
+## 18. Open questions
 
 1. **What are the technical documents?** `answer_from_docs` has nothing to answer from until this
    is decided. Fabric specs? Test methods? The Kaimei application instructions?
