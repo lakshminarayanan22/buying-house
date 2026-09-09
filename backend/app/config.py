@@ -13,6 +13,20 @@ class Settings(BaseSettings):
     # Database. pgvector is enabled in the first migration so Phase 6 only has to add columns.
     database_url: str = "postgresql+psycopg://bh:bh@localhost:5432/ecolink"
 
+    # --- Chatbot ---
+    # stub: keyword routing and templated answers. No key, no spend, and it makes the graph
+    #       testable. It is not a chatbot and reindex-style warnings say so.
+    # claude: the real thing.
+    llm_backend: str = "stub"
+    anthropic_api_key: str | None = None
+    classifier_model: str = "claude-haiku-4-5-20251001"
+    branch_model: str = "claude-sonnet-5"
+    classifier_confidence_floor: float = 0.6
+    allow_secondary_category: bool = True
+    sql_statement_timeout_ms: int = 2000
+    sql_row_cap: int = 500
+    database_url_readonly: str | None = None
+
     # --- Retrieval ---
     # stub: deterministic, no network, no model download. Exercises the pipeline and the
     #       lexical half of hybrid search honestly; the vector half is meaningless.

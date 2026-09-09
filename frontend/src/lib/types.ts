@@ -158,3 +158,45 @@ export interface Dashboard {
   }>;
   pipeline: Array<{ status: DealStatus; deals: number; value: number; commission: number }>;
 }
+
+export type ChatCategory = "DATABASE" | "TECHNICAL" | "CREATIVE";
+
+export interface PendingWrite {
+  sql: string;
+  kind: string;
+  table: string;
+  affected: number;
+  diff: Array<{
+    pk: string | null;
+    operation: string;
+    before: Record<string, unknown> | null;
+    after: Record<string, unknown> | null;
+    changes: Record<string, { before: unknown; after: unknown }>;
+  }>;
+}
+
+export interface AskResponse {
+  answer: string;
+  category: ChatCategory | null;
+  secondary: ChatCategory | null;
+  confidence: number | null;
+  reasoning: string | null;
+  citations: string[];
+  sql: string | null;
+  rows: Array<Record<string, unknown>> | null;
+  pending_write_id: string | null;
+  pending_write: PendingWrite | null;
+  needs_clarification: boolean;
+  backend: string;
+}
+
+export interface ChatHealth {
+  llm_backend: string;
+  is_stub: boolean;
+  classifier_model: string;
+  branch_model: string;
+  embedding_backend: string;
+  embedding_model: string;
+  similarity_floor: number;
+  readonly_role_configured: boolean;
+}

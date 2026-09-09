@@ -12,6 +12,7 @@ const NAV = [
   { href: "/", label: "Dashboard" },
   { href: "/deals", label: "Deals" },
   { href: "/companies", label: "Companies" },
+  { href: "/chat", label: "Ask" },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
