@@ -10,16 +10,26 @@ import hashlib
 import pathlib
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.deps import current_user
 from app.config import settings
-from app.db import get_db
+from app.db import SessionLocal, get_db
 from app.enums import ActivityAction, DocumentKind
 from app.models import ActivityLog, Company, Deal, Document, User
+from app.services.ingest import ingest_document
 from app.schemas import DocOut, Msg
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -54,6 +64,7 @@ def list_documents(
 
 @router.post("", response_model=DocOut, status_code=201)
 async def upload(
+    background: BackgroundTasks,
     file: UploadFile = File(...),
     title: str | None = Form(None),
     kind: DocumentKind = Form(DocumentKind.OTHER),
@@ -100,7 +111,20 @@ async def upload(
                        action=ActivityAction.UPLOAD, summary=f"Uploaded {doc.title}"))
     db.commit()
     db.refresh(doc)
+
+    # Extract, chunk and embed after the response goes out. The upload should not wait on a
+    # PDF parse, and a failure here is recorded on the document rather than losing the file.
+    background.add_task(_ingest_later, doc.id)
     return DocOut.model_validate(doc)
+
+
+def _ingest_later(document_id: uuid.UUID) -> None:
+    """Runs after the response. Needs its own session — the request's is closed by then."""
+    db = SessionLocal()
+    try:
+        ingest_document(db, document_id)
+    finally:
+        db.close()
 
 
 @router.get("/{document_id}/download")

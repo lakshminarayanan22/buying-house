@@ -15,7 +15,11 @@ def db():
     def _fk(dbapi_conn, _record):
         dbapi_conn.execute("PRAGMA foreign_keys=ON")
 
-    m.Base.metadata.create_all(engine)
+    # document_chunk uses pgvector and tsvector, neither of which SQLite can compile. It is a
+    # Postgres-only table by design and nothing in this file touches it — test_retrieval.py
+    # covers it against real Postgres.
+    sqlite_safe = [t for name, t in m.Base.metadata.tables.items() if name != "document_chunk"]
+    m.Base.metadata.create_all(engine, tables=sqlite_safe)
     session = Session(engine, expire_on_commit=False)
     try:
         yield session

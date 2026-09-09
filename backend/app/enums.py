@@ -118,3 +118,13 @@ class ActivityAction(StrEnum):
     UPLOAD = "UPLOAD"
     LOGIN = "LOGIN"
     NOTE = "NOTE"
+
+
+class ExtractionStatus(StrEnum):
+    """How far a document got through the retrieval pipeline."""
+
+    PENDING = "PENDING"        # uploaded, not yet processed
+    OK = "OK"                  # text extracted and chunks written
+    NEEDS_OCR = "NEEDS_OCR"    # a scan — almost no text layer to extract
+    FAILED = "FAILED"          # extraction raised; see extraction_error
+    SKIPPED = "SKIPPED"        # not a text-bearing type (an image, a spreadsheet)

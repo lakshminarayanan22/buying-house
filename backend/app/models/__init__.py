@@ -8,6 +8,7 @@ from app.models.company import (
     CompanyProduct,
     Contact,
 )
+from app.models.chunk import DocumentChunk
 from app.models.core import ActivityLog, Document, User
 from app.models.deal import Deal, DealMilestone, DealParty
 from app.models.reference import ReferenceItem
@@ -25,6 +26,7 @@ __all__ = [
     "DealMilestone",
     "DealParty",
     "Document",
+    "DocumentChunk",
     "ReferenceItem",
     "User",
 ]

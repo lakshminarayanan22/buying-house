@@ -1,0 +1,48 @@
+"""Rebuild every document's chunks from scratch.
+
+Run after changing chunk size, the context prefix, or the embedding model. Without this those
+are frightening changes; with it they are routine.
+
+    python -m scripts.reindex             # everything
+    python -m scripts.reindex --missing   # only documents never processed
+"""
+import argparse
+import logging
+import sys
+
+from app.config import settings
+from app.db import SessionLocal
+from app.retrieval.embedding import active_model
+from app.services.ingest import reindex_all
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+log = logging.getLogger("reindex")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--missing", action="store_true",
+                        help="only documents still marked PENDING")
+    args = parser.parse_args()
+
+    log.info("embedding backend: %s (%s, %s dims)",
+             settings.embedding_backend, active_model(), settings.embedding_dimensions)
+    if settings.embedding_backend == "stub":
+        log.warning("STUB BACKEND — vectors are deterministic hashes, not semantics. "
+                    "Lexical search still works; semantic recall numbers are meaningless.")
+
+    db = SessionLocal()
+    try:
+        totals = reindex_all(db, only_missing=args.missing)
+    finally:
+        db.close()
+
+    log.info("%s documents, %s chunks", totals["documents"], totals["chunks"])
+    for key, label in [("needs_ocr", "need OCR"), ("failed", "failed"), ("skipped", "skipped")]:
+        if totals[key]:
+            log.info("  %s %s", totals[key], label)
+    return 1 if totals["failed"] else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

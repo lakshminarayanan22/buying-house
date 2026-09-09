@@ -13,6 +13,21 @@ class Settings(BaseSettings):
     # Database. pgvector is enabled in the first migration so Phase 6 only has to add columns.
     database_url: str = "postgresql+psycopg://bh:bh@localhost:5432/ecolink"
 
+    # --- Retrieval ---
+    # stub: deterministic, no network, no model download. Exercises the pipeline and the
+    #       lexical half of hybrid search honestly; the vector half is meaningless.
+    # voyage: voyage-3, 1024 dimensions. Needs VOYAGE_API_KEY.
+    # local: sentence-transformers. Needs the package and a model download.
+    embedding_backend: str = "stub"
+    embedding_model: str = "voyage-3"
+    embedding_dimensions: int = 1024
+    voyage_api_key: str | None = None
+
+    similarity_floor: float = 0.40
+    retrieval_top_k: int = 8
+    chunk_size_tokens: int = 500
+    chunk_overlap_tokens: int = 80
+
     # Uploaded files. A folder per deal on local disk — see api/documents.py.
     file_storage_dir: str = "~/buying-house-files"
 

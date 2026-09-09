@@ -17,9 +17,9 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.enums import ActivityAction, DocumentKind, UserRole
+from app.enums import ActivityAction, DocumentKind, ExtractionStatus, UserRole
 from app.models.base import Base, JSONVariant, TimestampMixin, uuid_pk
 
 
@@ -81,6 +81,19 @@ class Document(Base, TimestampMixin):
 
     uploaded_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
+    )
+
+    # Where this file got to in the ingestion pipeline. NEEDS_OCR is the one that matters:
+    # a scanned brochure that yields no text is a document the chatbot silently cannot see,
+    # so it has to be visible rather than merely absent.
+    extraction_status: Mapped[ExtractionStatus] = mapped_column(
+        String(16), nullable=False, default=ExtractionStatus.PENDING,
+        server_default=ExtractionStatus.PENDING.value, index=True,
+    )
+    extraction_error: Mapped[str | None] = mapped_column(Text)
+
+    chunks: Mapped[list["DocumentChunk"]] = relationship(
+        back_populates="document", cascade="all, delete-orphan"
     )
 
     __table_args__ = (
