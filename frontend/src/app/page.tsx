@@ -6,10 +6,8 @@ import { api } from "@/lib/api";
 import { useAsync } from "@/lib/hooks";
 import { useRequireSession } from "@/lib/session";
 import { AppShell, PageHeader } from "@/components/AppShell";
-import {
-  Alert, Badge, Card, CardHeader, EmptyState, Table, Td, Th,
-} from "@/components/ui";
-import { daysAgo, dealTone, formatDate, money, titleCase } from "@/lib/format";
+import { Alert, Badge, Card, CardHeader, EmptyState, StatusBadge, Table, Td, Th } from "@/components/ui";
+import { daysAgo, formatDate, money, titleCase } from "@/lib/format";
 import type { Dashboard } from "@/lib/types";
 
 /**
@@ -43,10 +41,8 @@ export default function DashboardPage() {
           { label: "Gone quiet", value: String(data?.quiet.length ?? 0) },
         ].map((stat) => (
           <Card key={stat.label} className="px-4 py-3">
-            <div className="text-[11px] tracking-wide uppercase" style={{ color: "var(--text-subtle)" }}>
-              {stat.label}
-            </div>
-            <div className="tabular mt-1 text-2xl font-semibold">{stat.value}</div>
+            <div className="micro">{stat.label}</div>
+            <div className="readout mt-1 text-2xl font-semibold">{stat.value}</div>
             {stat.hint ? (
               <div className="text-[11px]" style={{ color: "var(--danger)" }}>{stat.hint}</div>
             ) : null}
@@ -156,8 +152,8 @@ export default function DashboardPage() {
                         {row.deal_no}
                       </div>
                     </Td>
-                    <Td><Badge tone={dealTone(row.status)}>{titleCase(row.status)}</Badge></Td>
-                    <Td align="right">
+                    <Td><StatusBadge status={row.status} /></Td>
+                    <Td align="right" readout={false}>
                       <span style={{ color: row.days_silent > 30 ? "var(--danger)" : undefined }}>
                         {daysAgo(row.days_silent)}
                       </span>
@@ -183,7 +179,7 @@ export default function DashboardPage() {
                   <tr key={`${row.deal_no}-${i}`}>
                     <Td>
                       <div>{row.milestone}</div>
-                      <Badge tone={dealTone(row.status)}>{titleCase(row.status)}</Badge>
+                      <StatusBadge status={row.status} />
                     </Td>
                     <Td>
                       <div className="font-mono text-[11px]" style={{ color: "var(--text-subtle)" }}>
@@ -191,7 +187,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="truncate">{row.title}</div>
                     </Td>
-                    <Td align="right">
+                    <Td align="right" readout={false}>
                       <span style={{ color: row.overdue ? "var(--danger)" : undefined }}>
                         {formatDate(row.planned_date)}
                       </span>

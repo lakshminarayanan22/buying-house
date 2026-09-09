@@ -4,6 +4,8 @@
  *  no component library, because the whole surface here is forms and tables. */
 import * as React from "react";
 
+import { dealTone, isLive, titleCase } from "@/lib/format";
+
 export function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
@@ -12,14 +14,33 @@ export function cx(...parts: Array<string | false | null | undefined>) {
 export function Card({
   children,
   className,
+  rail = false,
   ...rest
-}: React.HTMLAttributes<HTMLDivElement>) {
+}: React.HTMLAttributes<HTMLDivElement> & { rail?: boolean }) {
   return (
     <div
       {...rest}
-      className={cx("rounded-lg border", className)}
-      style={{ background: "var(--surface)", borderColor: "var(--border)", ...rest.style }}
+      className={cx("relative overflow-hidden rounded-lg border", className)}
+      style={{
+        background: "var(--surface)",
+        borderColor: "var(--border)",
+        // A panel bolted onto the hull: lifted off the grid by a shadow, with a
+        // hairline of internal light along the top edge.
+        boxShadow: "0 1px 0 0 var(--surface-2) inset, 0 8px 24px -18px rgba(0,0,0,.9)",
+        ...rest.style,
+      }}
     >
+      {/* The rail marks a panel as primary — the one you came to this screen to read. */}
+      {rail ? (
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, var(--accent-line) 18%, var(--accent-line) 82%, transparent)",
+          }}
+        />
+      ) : null}
       {children}
     </div>
   );
@@ -69,9 +90,16 @@ export function Button({
   ...rest
 }: ButtonProps) {
   const palette: Record<string, React.CSSProperties> = {
-    primary: { background: "var(--accent)", color: "var(--accent-fg)", borderColor: "var(--accent)" },
+    // Primary is a backlit control: it carries its own halo, so it reads as the
+    // thing on the panel that is powered.
+    primary: {
+      background: "var(--accent)",
+      color: "var(--accent-fg)",
+      borderColor: "var(--accent)",
+      boxShadow: "0 0 0 1px var(--accent-line), 0 4px 16px -6px var(--glow)",
+    },
     secondary: {
-      background: "var(--surface)",
+      background: "var(--surface-2)",
       color: "var(--text)",
       borderColor: "var(--border-strong)",
     },
@@ -104,6 +132,16 @@ export function Spinner() {
       className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
     />
   );
+}
+
+/**
+ * Tailwind resolves conflicting utilities by CSS source order, not by their order in a
+ * class string, so a caller's `w-44` silently loses to the base `w-full` and the control
+ * renders full width. Every sized filter in the app was doing this. Dropping the default
+ * whenever the caller sets a width of their own is enough to settle it.
+ */
+function widthClass(className?: string) {
+  return /(^|\s)(w-|max-w-)/.test(className ?? "") ? "" : "w-full";
 }
 
 /* ----------------------------------------------------------------- Field */
@@ -152,7 +190,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       <input
         ref={ref}
         {...rest}
-        className={cx("w-full rounded-md border px-2.5 py-1.5 text-sm", className)}
+        className={cx(widthClass(className), "rounded-md border px-2.5 py-1.5 text-sm", className)}
         style={{ ...controlStyle, ...rest.style }}
       />
     );
@@ -167,7 +205,7 @@ export const Textarea = React.forwardRef<
     <textarea
       ref={ref}
       {...rest}
-      className={cx("w-full rounded-md border px-2.5 py-1.5 text-sm", className)}
+      className={cx(widthClass(className), "rounded-md border px-2.5 py-1.5 text-sm", className)}
       style={{ ...controlStyle, ...rest.style }}
     />
   );
@@ -181,11 +219,43 @@ export function Select({
   return (
     <select
       {...rest}
-      className={cx("w-full rounded-md border px-2.5 py-1.5 text-sm", className)}
+      className={cx(widthClass(className), "rounded-md border px-2.5 py-1.5 text-sm", className)}
       style={{ ...controlStyle, ...rest.style }}
     >
       {children}
     </select>
+  );
+}
+
+/* ------------------------------------------------------------------ Lamp */
+const LAMPS: Record<string, string> = {
+  slate: "var(--text-subtle)",
+  emerald: "var(--success)",
+  sky: "var(--accent)",
+  amber: "var(--warning)",
+  rose: "var(--danger)",
+};
+
+/**
+ * An indicator lamp.
+ *
+ * A dot with a halo the colour of whatever it is reporting. This is the one piece
+ * of the console idiom that is load-bearing rather than atmospheric: on a dense
+ * table the eye finds a lit dot far faster than it reads a word, so status becomes
+ * scannable down a column without anyone having to parse it.
+ */
+export function Lamp({ tone = "slate", live = false }: { tone?: string; live?: boolean }) {
+  const colour = LAMPS[tone] ?? LAMPS.slate;
+  return (
+    <span
+      aria-hidden
+      className={cx("inline-block h-[6px] w-[6px] shrink-0 rounded-full", live && "lamp-live")}
+      style={{
+        background: colour,
+        // Two rings: a tight one that reads as the bezel, a wide soft one as spill.
+        boxShadow: `0 0 0 2px color-mix(in srgb, ${colour} 22%, transparent), 0 0 7px ${colour}`,
+      }}
+    />
   );
 }
 
@@ -202,20 +272,41 @@ export function Badge({
   tone = "slate",
   children,
   title,
+  lamp = false,
+  live = false,
 }: {
   tone?: string;
   children: React.ReactNode;
   title?: string;
+  lamp?: boolean;
+  live?: boolean;
 }) {
   const palette = TONES[tone] ?? TONES.slate;
   return (
     <span
       title={title}
-      className="inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap"
+      className="inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap"
       style={{ background: palette.bg, color: palette.fg }}
     >
+      {lamp ? <Lamp tone={tone} live={live} /> : null}
       {children}
     </span>
+  );
+}
+
+/**
+ * A deal, milestone or commission state.
+ *
+ * Every status in the app went through `dealTone` and `titleCase` at the call site,
+ * which meant seven places to keep in step. It is one component now, and it is where
+ * the lamp is decided: lit for every state, pulsing only for the ones still running.
+ */
+export function StatusBadge({ status }: { status: string | null | undefined }) {
+  if (!status) return null;
+  return (
+    <Badge tone={dealTone(status)} lamp live={isLive(status)}>
+      {titleCase(status)}
+    </Badge>
   );
 }
 
@@ -271,11 +362,8 @@ export function Th({
 }) {
   return (
     <th
-      className={cx(
-        "border-b px-3 py-2 text-[11px] font-semibold tracking-wide uppercase",
-        align === "right" ? "text-right" : "text-left",
-      )}
-      style={{ borderColor: "var(--border)", color: "var(--text-subtle)" }}
+      className={cx("micro border-b px-3 py-2", align === "right" ? "text-right" : "text-left")}
+      style={{ borderColor: "var(--border)" }}
     >
       {children}
     </th>
@@ -285,17 +373,25 @@ export function Th({
 export function Td({
   children,
   align = "left",
+  readout,
   className,
 }: {
   children?: React.ReactNode;
   align?: "left" | "right";
+  /** Render as an instrument figure — mono and tabular. Defaults to on for
+   *  right-aligned cells, since those are nearly always money or quantity.
+   *  Pass false for the handful that are right-aligned prose ("24 days ago"),
+   *  where a monospace face just looks broken. */
+  readout?: boolean;
   className?: string;
 }) {
+  const asFigure = readout ?? align === "right";
   return (
     <td
       className={cx(
         "border-b px-3 py-2 align-top",
-        align === "right" ? "text-right tabular" : "text-left",
+        align === "right" ? "text-right" : "text-left",
+        asFigure && "readout",
         className,
       )}
       style={{ borderColor: "var(--border)" }}

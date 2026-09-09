@@ -8,11 +8,8 @@ import { ApiError, api, uploadFile } from "@/lib/api";
 import { useAsync } from "@/lib/hooks";
 import { useRequireSession } from "@/lib/session";
 import { AppShell, PageHeader } from "@/components/AppShell";
-import {
-  Alert, Badge, Button, Card, CardHeader, EmptyState, Field, FileUpload, Input, Select,
-  Table, Td, Textarea, Th,
-} from "@/components/ui";
-import { dealTone, formatDate, money, titleCase } from "@/lib/format";
+import { Alert, Badge, Button, Card, CardHeader, EmptyState, Field, FileUpload, Input, Select, StatusBadge, Table, Td, Textarea, Th } from "@/components/ui";
+import { formatDate, money, titleCase } from "@/lib/format";
 import type { CompanyDetail, DealRow, DocRow, Ref } from "@/lib/types";
 
 export default function CompanyPage() {
@@ -38,7 +35,7 @@ export default function CompanyPage() {
           <span className="flex flex-wrap items-center gap-2">
             {c.sells ? <Badge tone="emerald">Sells to us</Badge> : null}
             {c.buys ? <Badge tone="sky">Buys from us</Badge> : null}
-            <Badge tone={dealTone(c.status)}>{titleCase(c.status)}</Badge>
+            <StatusBadge status={c.status} />
             <span>{c.city ?? "—"}</span>
             {c.open_deals ? <span>· {c.open_deals} open deal{c.open_deals === 1 ? "" : "s"}</span> : null}
           </span>
@@ -105,7 +102,7 @@ export default function CompanyPage() {
                           {d.deal_no}
                         </div>
                       </Td>
-                      <Td><Badge tone={dealTone(d.status)}>{titleCase(d.status)}</Badge></Td>
+                      <Td><StatusBadge status={d.status} /></Td>
                       <Td align="right">{money(d.value)}</Td>
                       <Td>{formatDate(d.target_ship_date)}</Td>
                     </tr>

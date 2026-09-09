@@ -75,3 +75,11 @@ const DEAL_TONES: Record<string, string> = {
 export function dealTone(status: string | null | undefined): string {
   return DEAL_TONES[status ?? ""] ?? "slate";
 }
+
+/* States where something is actively running rather than parked. Only these get a
+   pulsing lamp — if everything blinks, nothing does. */
+const LIVE_STATUSES = new Set(["NEGOTIATING", "IN_PROGRESS", "DUE"]);
+
+export function isLive(status: string | null | undefined): boolean {
+  return LIVE_STATUSES.has(status ?? "");
+}

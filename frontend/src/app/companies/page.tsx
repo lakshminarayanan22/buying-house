@@ -8,10 +8,8 @@ import { ApiError, api } from "@/lib/api";
 import { useAsync, useDebounced } from "@/lib/hooks";
 import { useRequireSession } from "@/lib/session";
 import { AppShell, PageHeader } from "@/components/AppShell";
-import {
-  Alert, Badge, Button, Card, CardHeader, EmptyState, Field, Input, Select, Table, Td, Th,
-} from "@/components/ui";
-import { dealTone, titleCase } from "@/lib/format";
+import { Alert, Badge, Button, Card, CardHeader, EmptyState, Field, Input, Select, StatusBadge, Table, Td, Th } from "@/components/ui";
+import {  } from "@/lib/format";
 import type { CompanyDetail, CompanyRow, Ref } from "@/lib/types";
 
 export default function CompaniesPage() {
@@ -49,7 +47,7 @@ export default function CompaniesPage() {
 
       {creating ? <NewCompany onClose={() => setCreating(false)} /> : null}
 
-      <Card>
+      <Card rail>
         <CardHeader
           title="All companies"
           actions={
@@ -109,7 +107,7 @@ export default function CompaniesPage() {
                   <Td><Chips values={c.processes} /></Td>
                   <Td><Chips values={c.products} /></Td>
                   <Td><Chips values={c.certifications} tone="emerald" /></Td>
-                  <Td><Badge tone={dealTone(c.status)}>{titleCase(c.status)}</Badge></Td>
+                  <Td><StatusBadge status={c.status} /></Td>
                 </tr>
               ))}
             </tbody>

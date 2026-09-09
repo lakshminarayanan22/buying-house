@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ApiError, login } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { Alert, Button, Card, Field, Input } from "@/components/ui";
+import { BrandMark } from "@/components/BrandMark";
 
 function LoginForm() {
   const router = useRouter();
@@ -21,7 +22,12 @@ function LoginForm() {
     <main className="grid min-h-dvh place-items-center px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-lg font-semibold tracking-tight">Ecolink</h1>
+          <div className="flex items-center gap-2.5">
+            <BrandMark size={30} />
+            <h1 className="text-lg font-semibold" style={{ letterSpacing: "0.16em" }}>
+              ECOLINK
+            </h1>
+          </div>
           <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
             Deals, companies and commission
           </p>

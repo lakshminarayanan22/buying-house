@@ -8,11 +8,8 @@ import { ApiError, api } from "@/lib/api";
 import { useAsync, useDebounced } from "@/lib/hooks";
 import { useRequireSession } from "@/lib/session";
 import { AppShell, PageHeader } from "@/components/AppShell";
-import {
-  Alert, Badge, Button, Card, CardHeader, EmptyState, Field, Input, Select,
-  Table, Td, Textarea, Th,
-} from "@/components/ui";
-import { dealTone, formatDate, money, titleCase } from "@/lib/format";
+import { Alert, Button, Card, CardHeader, EmptyState, Field, Input, Select, StatusBadge, Table, Td, Textarea, Th } from "@/components/ui";
+import { formatDate, money, titleCase } from "@/lib/format";
 import type { DealDetail, DealRow } from "@/lib/types";
 
 const STATUSES = [
@@ -52,7 +49,7 @@ export default function DealsPage() {
 
       {creating ? <NewDeal onClose={() => setCreating(false)} /> : null}
 
-      <Card>
+      <Card rail>
         <CardHeader
           title="All deals"
           actions={
@@ -111,7 +108,7 @@ export default function DealsPage() {
                       ))}
                     </div>
                   </Td>
-                  <Td><Badge tone={dealTone(d.status)}>{titleCase(d.status)}</Badge></Td>
+                  <Td><StatusBadge status={d.status} /></Td>
                   <Td align="right">{money(d.value)}</Td>
                   <Td align="right" className="font-medium">{money(d.commission)}</Td>
                   <Td>{formatDate(d.target_ship_date)}</Td>

@@ -8,11 +8,8 @@ import { ApiError, api, uploadFile } from "@/lib/api";
 import { useAsync } from "@/lib/hooks";
 import { useRequireSession } from "@/lib/session";
 import { AppShell, PageHeader, RoleBadge } from "@/components/AppShell";
-import {
-  Alert, Badge, Button, Card, CardHeader, EmptyState, Field, Input, Select,
-  FileUpload, Table, Td, Th,
-} from "@/components/ui";
-import { dealTone, formatDate, money, titleCase } from "@/lib/format";
+import { Alert, Button, Card, CardHeader, EmptyState, Field, FileUpload, Input, Select, StatusBadge, Table, Td, Th } from "@/components/ui";
+import { formatDate, money, titleCase } from "@/lib/format";
 import type { CompanyRow, DealDetail, Ref } from "@/lib/types";
 
 const DEAL_STATUSES = [
@@ -22,6 +19,29 @@ const ROLES = ["BUYER", "SUPPLIER", "PROCESSOR", "INPUT_SUPPLIER", "OTHER"];
 const BASES = ["NONE", "PERCENTAGE", "MARGIN", "FIXED"];
 const COMMISSION_STATUSES = ["NOT_DUE", "DUE", "INVOICED", "RECEIVED", "WRITTEN_OFF"];
 const MILESTONE_STATUSES = ["PENDING", "IN_PROGRESS", "DONE", "BLOCKED", "SKIPPED"];
+
+/** One labelled figure in the strip under a deal's title. */
+function Readout({
+  label,
+  accent = false,
+  children,
+}: {
+  label: string;
+  accent?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="inline-flex flex-col leading-tight">
+      <span className="micro">{label}</span>
+      <span
+        className="readout text-sm font-medium"
+        style={accent ? { color: "var(--accent)" } : undefined}
+      >
+        {children}
+      </span>
+    </span>
+  );
+}
 
 export default function DealPage() {
   const { id } = useParams<{ id: string }>();
@@ -57,11 +77,18 @@ export default function DealPage() {
       <PageHeader
         title={d.title}
         subtitle={
-          <span className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-xs">{d.deal_no}</span>
-            <Badge tone={dealTone(d.status)}>{titleCase(d.status)}</Badge>
-            {d.target_ship_date ? <span>ships {formatDate(d.target_ship_date)}</span> : null}
-            <span>· value {money(d.value)} · our commission {money(d.commission)}</span>
+          /* The strip along the top of a deal is the one thing everyone reads first,
+             so it is laid out as labelled instruments rather than a sentence. */
+          <span className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <span className="readout text-xs" style={{ color: "var(--text-subtle)" }}>
+              {d.deal_no}
+            </span>
+            <StatusBadge status={d.status} />
+            {d.target_ship_date ? (
+              <Readout label="Ships">{formatDate(d.target_ship_date)}</Readout>
+            ) : null}
+            <Readout label="Value">{money(d.value)}</Readout>
+            <Readout label="Our commission" accent>{money(d.commission)}</Readout>
           </span>
         }
         actions={
@@ -82,7 +109,7 @@ export default function DealPage() {
 
       <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
         <div className="space-y-5">
-          <Card>
+          <Card rail>
             <CardHeader
               title="The chain"
               subtitle="Each company's role on this deal, and what we earn on their leg"

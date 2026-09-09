@@ -5,9 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { AskDock } from "@/components/AskDock";
-import { ThemePicker } from "@/components/ThemePicker";
+import { AppearanceToggle } from "@/components/AppearanceToggle";
+import { BrandMark } from "@/components/BrandMark";
 import { useSession } from "@/lib/session";
-import { Badge, Button, cx } from "@/components/ui";
+import { Badge, Button, Lamp, cx } from "@/components/ui";
 import { titleCase } from "@/lib/format";
 
 const NAV = [
@@ -25,13 +26,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header
         className="sticky top-0 z-20 border-b backdrop-blur"
         style={{
-          background: "color-mix(in srgb, var(--surface) 88%, transparent)",
+          background: "color-mix(in srgb, var(--surface) 82%, transparent)",
           borderColor: "var(--border)",
+          // A thread of accent light along the bottom edge, so the bar reads as the
+          // lit rim of the console rather than a rule drawn under the nav.
+          boxShadow: "0 1px 0 0 var(--accent-line), 0 10px 30px -22px rgba(0,0,0,.9)",
         }}
       >
         <div className="mx-auto flex max-w-[1400px] items-center gap-6 px-5 py-2.5">
-          <Link href="/" className="text-sm font-semibold tracking-tight whitespace-nowrap">
-            Ecolink
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 text-sm font-semibold whitespace-nowrap"
+            title={user ? "Ecolink — link nominal" : "Ecolink — connecting"}
+          >
+            <BrandMark />
+            <span style={{ letterSpacing: "0.16em" }}>ECOLINK</span>
+            <Lamp tone={user ? "emerald" : "amber"} live={!user} />
           </Link>
 
           <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
@@ -51,6 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   style={{
                     background: active ? "var(--accent-soft)" : "transparent",
                     color: active ? "var(--accent)" : "var(--text-muted)",
+                    boxShadow: active ? "0 0 0 1px var(--accent-line)" : undefined,
                   }}
                 >
                   {item.label}
@@ -63,12 +74,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {user ? (
               <div className="hidden text-right sm:block">
                 <div className="text-xs font-medium">{user.name}</div>
-                <div className="text-[11px]" style={{ color: "var(--text-subtle)" }}>
-                  {titleCase(user.role)}
-                </div>
+                <div className="micro">{titleCase(user.role)}</div>
               </div>
             ) : null}
-            <ThemePicker />
+            <AppearanceToggle />
             <Button size="sm" variant="ghost" onClick={() => void signOut()}>
               Sign out
             </Button>
