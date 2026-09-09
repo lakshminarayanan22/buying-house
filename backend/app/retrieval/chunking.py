@@ -68,8 +68,9 @@ def _split_recursive(text: str, size: int, separators: list[str]) -> list[str]:
     return out
 
 
-def context_prefix(document_title: str, company_name: str | None,
-                   company_city: str | None) -> str:
+def context_prefix(document_title: str, company_name: str | None = None,
+                   company_city: str | None = None, *, deal_no: str | None = None,
+                   deal_title: str | None = None) -> str:
     """The line prepended before embedding — the highest-leverage part of ingestion.
 
     "Minimum order quantity 500 kg, lead time 12 days" is nearly identical across every brochure
@@ -77,5 +78,10 @@ def context_prefix(document_title: str, company_name: str | None,
     company matches every company equally. The prefix is not stored on the chunk — only what
     the user sees is — because it is derivable and would otherwise be shown in citations.
     """
+    parts = [f"Document: {document_title}"]
     where = ", ".join(p for p in [company_name, company_city] if p)
-    return f"Document: {document_title}" + (f" | Company: {where}" if where else "")
+    if where:
+        parts.append(f"Company: {where}")
+    if deal_no or deal_title:
+        parts.append(f"Deal: {' — '.join(p for p in [deal_no, deal_title] if p)}")
+    return " | ".join(parts)

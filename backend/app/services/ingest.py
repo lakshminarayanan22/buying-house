@@ -15,14 +15,16 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.enums import ExtractionStatus
-from app.models import Company, Document, DocumentChunk
+from app.models import Company, Deal, Document, DocumentChunk
 from app.retrieval.chunking import context_prefix, estimate_tokens, split_text
 from app.retrieval.embedding import active_model, embed_many
 
 logger = logging.getLogger(__name__)
 
-# Below this, a PDF is a scan rather than a document with a text layer.
-MIN_TEXT_CHARS = 200
+# Below this, a PDF is a scan rather than a document with a text layer. It is a *scan detector*
+# and applies to PDFs only — a real purchase order can be three lines long, and holding text
+# files to the same bar would silently drop exactly the short documents a deal folder is full of.
+MIN_PDF_TEXT_CHARS = 200
 
 TEXT_SUFFIXES = {".txt", ".md", ".csv"}
 
@@ -48,10 +50,13 @@ def extract_text(path: pathlib.Path, content_type: str | None) -> tuple[str, Ext
         # An image or a spreadsheet. Not a failure — simply nothing to index.
         return "", ExtractionStatus.SKIPPED
 
-    if len(text.strip()) < MIN_TEXT_CHARS:
-        # A PDF this short is a scan, and OCR would recover it. Anything else is just empty,
-        # and OCR would not help — so the two are reported differently.
-        return text, ExtractionStatus.NEEDS_OCR if is_pdf else ExtractionStatus.SKIPPED
+    if is_pdf and len(text.strip()) < MIN_PDF_TEXT_CHARS:
+        # Almost no text layer: a scan. OCR would recover it, so it is flagged rather than
+        # stored as an empty string.
+        return text, ExtractionStatus.NEEDS_OCR
+    if not text.strip():
+        # Genuinely empty. OCR would not help, so it reports differently.
+        return text, ExtractionStatus.SKIPPED
     return text, ExtractionStatus.OK
 
 
@@ -87,8 +92,16 @@ def ingest_document(db: Session, document_id: uuid.UUID) -> dict:
         return {"status": status.value, "chunks": 0}
 
     company = db.get(Company, doc.company_id) if doc.company_id else None
-    prefix = context_prefix(doc.title, company.name if company else None,
-                            company.city if company else None)
+    deal = db.get(Deal, doc.deal_id) if doc.deal_id else None
+    # A purchase order filed under a deal has no company of its own. Without the deal in the
+    # prefix, "the PO for the cotton shipment" has nothing to match on but the word "purchase".
+    prefix = context_prefix(
+        doc.title,
+        company.name if company else None,
+        company.city if company else None,
+        deal_no=deal.deal_no if deal else None,
+        deal_title=deal.title if deal else None,
+    )
 
     pieces = split_text(text)
     vectors = embed_many([f"{prefix}\n\n{piece}" for piece in pieces])

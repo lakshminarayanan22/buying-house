@@ -166,6 +166,28 @@ def test_a_scanned_pdf_is_flagged_for_ocr(db, tmp_path):
     assert result["chunks"] == 0
 
 
+def test_a_short_text_document_is_still_indexed(db, tmp_path):
+    """A real purchase order is three lines long. An earlier version held every file to the
+    PDF scan-detection threshold and silently skipped exactly the short documents a deal
+    folder is full of."""
+    company = m.Company(name="Short Doc Mills", city="Tiruppur")
+    db.add(company)
+    db.commit()
+    doc = _document(db, tmp_path, "PO 4471",
+                    "PURCHASE ORDER 4471\nQuantity 240 MT.\nFOB Brisbane.", company=company)
+    result = ingest_document(db, doc.id)
+    db.refresh(doc)
+    assert doc.extraction_status == ExtractionStatus.OK
+    assert result["chunks"] == 1
+
+
+def test_a_deal_document_carries_the_deal_in_its_prefix():
+    """A PO filed under a deal has no company of its own; without the deal in the prefix it has
+    nothing to match on but the word "purchase"."""
+    prefix = context_prefix("PO 4471", deal_no="DL-2026-0001", deal_title="Australian cotton")
+    assert "DL-2026-0001" in prefix and "Australian cotton" in prefix
+
+
 def test_an_empty_text_file_is_skipped_not_indexed(db, tmp_path):
     """Empty is not the same as scanned — OCR would not help, so it reports differently."""
     company = m.Company(name="Empty Mills", city="Karur")
