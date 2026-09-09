@@ -2,6 +2,12 @@
 
 > This document is self-contained. Part I describes the application the chatbot sits on top of;
 > Part II is the plan itself. Skip to Part II if you already know the system.
+>
+> **Partly superseded.** `chatbot-langchain-plan.md` is the build spec, and it chooses a
+> classifier-routed LangGraph topology over the tool-calling router argued for in §9.2 and
+> §10 below. Where the two disagree, that document wins. Everything else here — the
+> application context, supplier matching as a filter rather than RAG, reads-versus-writes,
+> pgvector over Weaviate, guardrails, cost — still stands.
 
 ---
 
