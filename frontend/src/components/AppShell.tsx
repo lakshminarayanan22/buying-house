@@ -4,6 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { AskDock } from "@/components/AskDock";
+import { ThemePicker } from "@/components/ThemePicker";
 import { useSession } from "@/lib/session";
 import { Badge, Button, cx } from "@/components/ui";
 import { titleCase } from "@/lib/format";
@@ -12,7 +14,6 @@ const NAV = [
   { href: "/", label: "Dashboard" },
   { href: "/deals", label: "Deals" },
   { href: "/companies", label: "Companies" },
-  { href: "/chat", label: "Ask" },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -67,6 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
             ) : null}
+            <ThemePicker />
             <Button size="sm" variant="ghost" onClick={() => void signOut()}>
               Sign out
             </Button>
@@ -74,7 +76,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1400px] px-5 py-6">{children}</main>
+      {/* pb-28 leaves room for the docked composer, which is fixed over the page. */}
+      <main className="mx-auto max-w-[1400px] px-5 pt-6 pb-28">{children}</main>
+      <AskDock />
     </div>
   );
 }

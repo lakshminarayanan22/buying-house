@@ -27,6 +27,10 @@ _PENDING: dict[str, dict] = {}
 
 class AskBody(BaseModel):
     question: str = Field(min_length=2, max_length=2000)
+    # What the user is looking at. The composer is on every screen, so "what's outstanding on
+    # this one" should work without naming the deal. Kept out of the stored question so the
+    # transcript reads as the person actually typed it.
+    context: str | None = Field(None, max_length=400)
 
 
 class AskResponse(BaseModel):
@@ -48,7 +52,8 @@ class AskResponse(BaseModel):
 def ask(body: AskBody, user: User = Depends(current_user),
         db: Session = Depends(get_db)) -> AskResponse:
     try:
-        state = answer(body.question, user_id=str(user.id), user_role=user.role)
+        state = answer(body.question, user_id=str(user.id), user_role=user.role,
+                       context=body.context)
     except Exception as exc:  # noqa: BLE001 - a model or query failure is a 400, not a 500
         logger.exception("chat failed")
         raise HTTPException(status.HTTP_400_BAD_REQUEST,

@@ -159,18 +159,19 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
   },
 );
 
-export function Textarea({
-  className,
-  ...rest
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export const Textarea = React.forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>
+>(function Textarea({ className, ...rest }, ref) {
   return (
     <textarea
+      ref={ref}
       {...rest}
       className={cx("w-full rounded-md border px-2.5 py-1.5 text-sm", className)}
       style={{ ...controlStyle, ...rest.style }}
     />
   );
-}
+});
 
 export function Select({
   className,
@@ -326,6 +327,73 @@ export function CompletenessBar({ value }: { value: number }) {
       <span className="tabular text-xs" style={{ color: "var(--text-muted)" }}>
         {value}%
       </span>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------- FileUpload */
+/**
+ * A real button that opens the file picker.
+ *
+ * A bare `<input type="file">` renders as the browser's own control — a grey "Choose file"
+ * with "No file chosen" beside it — which looks like nothing else on the page and reads as
+ * unfinished. The input is kept for the picker and hidden; the button is what people see.
+ */
+export function FileUpload({
+  label = "Upload a file",
+  accept,
+  busy = false,
+  disabled = false,
+  onFile,
+}: {
+  label?: string;
+  accept?: string;
+  busy?: boolean;
+  disabled?: boolean;
+  onFile: (file: File) => void | Promise<void>;
+}) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [name, setName] = React.useState<string | null>(null);
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        className="sr-only"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          setName(file.name);
+          await onFile(file);
+          // Reset so re-picking the same file fires change again.
+          if (inputRef.current) inputRef.current.value = "";
+        }}
+      />
+      <Button
+        type="button"
+        size="sm"
+        loading={busy}
+        disabled={disabled || busy}
+        onClick={() => inputRef.current?.click()}
+      >
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path
+            d="M8 11V3M8 3L5 6M8 3l3 3M3 11v1.5A1.5 1.5 0 0 0 4.5 14h7a1.5 1.5 0 0 0 1.5-1.5V11"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        {busy ? "Uploading…" : label}
+      </Button>
+      {name && !busy ? (
+        <span className="truncate text-[11px]" style={{ color: "var(--text-subtle)" }}>
+          {name}
+        </span>
+      ) : null}
     </div>
   );
 }

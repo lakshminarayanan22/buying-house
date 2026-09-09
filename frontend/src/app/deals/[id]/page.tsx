@@ -10,7 +10,7 @@ import { useRequireSession } from "@/lib/session";
 import { AppShell, PageHeader, RoleBadge } from "@/components/AppShell";
 import {
   Alert, Badge, Button, Card, CardHeader, EmptyState, Field, Input, Select,
-  Table, Td, Th,
+  FileUpload, Table, Td, Th,
 } from "@/components/ui";
 import { dealTone, formatDate, money, titleCase } from "@/lib/format";
 import type { CompanyRow, DealDetail, Ref } from "@/lib/types";
@@ -435,22 +435,22 @@ function Upload({
   dealId, onSaved, onError,
 }: { dealId: string; onSaved: () => void; onError: (m: string) => void }) {
   const [busy, setBusy] = React.useState(false);
-  const [kind, setKind] = React.useState("OTHER");
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [kind, setKind] = React.useState("PURCHASE_ORDER");
 
   return (
     <div className="space-y-2 border-t px-4 py-3" style={{ borderColor: "var(--border)" }}>
-      <Select value={kind} onChange={(e) => setKind(e.target.value)} className="text-xs">
-        {["PURCHASE_ORDER", "INVOICE", "PACKING_LIST", "CONTRACT", "CERTIFICATE", "TEST_REPORT",
-          "PHOTO", "OTHER"].map((k) => <option key={k} value={k}>{titleCase(k)}</option>)}
-      </Select>
-      <input
-        ref={inputRef}
-        type="file"
-        className="block w-full text-xs"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
+      <Field label="Filing it as">
+        <Select value={kind} onChange={(e) => setKind(e.target.value)}>
+          {["PURCHASE_ORDER", "INVOICE", "PACKING_LIST", "CONTRACT", "CERTIFICATE",
+            "TEST_REPORT", "PHOTO", "OTHER"].map((k) => (
+            <option key={k} value={k}>{titleCase(k)}</option>
+          ))}
+        </Select>
+      </Field>
+      <FileUpload
+        label="Add to this folder"
+        busy={busy}
+        onFile={async (file) => {
           setBusy(true);
           try {
             const form = new FormData();
@@ -458,7 +458,6 @@ function Upload({
             form.append("kind", kind);
             form.append("deal_id", dealId);
             await uploadFile(form);
-            if (inputRef.current) inputRef.current.value = "";
             onSaved();
           } catch (err) {
             onError(err instanceof ApiError ? err.message : "Upload failed.");
@@ -467,7 +466,6 @@ function Upload({
           }
         }}
       />
-      {busy ? <p className="text-xs" style={{ color: "var(--text-muted)" }}>Uploading…</p> : null}
     </div>
   );
 }

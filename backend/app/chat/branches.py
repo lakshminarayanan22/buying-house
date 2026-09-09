@@ -24,6 +24,12 @@ REFUSAL = ("I don't have anything on that. Nothing in the uploaded documents cov
            "and I would rather say so than guess.")
 
 
+def _with_context(state: ChatState, question: str) -> str:
+    """Prefix the page the user is on, when there is one."""
+    ctx = state.get("page_context")
+    return f"{ctx}\n\n{question}" if ctx else question
+
+
 def _schema_prompt() -> str:
     """The schema, generated from the mapped metadata so it cannot drift from the real tables."""
     from sqlalchemy.dialects import postgresql
@@ -111,7 +117,7 @@ def database(state: ChatState) -> ChatState:
         "prose and no markdown fence.\n"
         + ("A change to the data is allowed if the question asks for one.\n" if is_admin
            else "Only a SELECT is allowed.\n")
-        + f"\nSchema:\n{_schema_prompt()}\n\nQuestion: {question}"
+        + f"\nSchema:\n{_schema_prompt()}\n\nQuestion: {_with_context(state, question)}"
     ).content.strip().strip("`")
     if generated.lower().startswith("sql"):
         generated = generated[3:].strip()

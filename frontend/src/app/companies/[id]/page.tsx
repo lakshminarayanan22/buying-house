@@ -9,7 +9,7 @@ import { useAsync } from "@/lib/hooks";
 import { useRequireSession } from "@/lib/session";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import {
-  Alert, Badge, Button, Card, CardHeader, EmptyState, Field, Input, Select,
+  Alert, Badge, Button, Card, CardHeader, EmptyState, Field, FileUpload, Input, Select,
   Table, Td, Textarea, Th,
 } from "@/components/ui";
 import { dealTone, formatDate, money, titleCase } from "@/lib/format";
@@ -361,22 +361,20 @@ function UploadFile({
 }: { companyId: string; onSaved: () => void; onError: (m: string) => void }) {
   const [kind, setKind] = React.useState("BROCHURE");
   const [busy, setBusy] = React.useState(false);
-  const inputRef = React.useRef<HTMLInputElement>(null);
 
   return (
     <div className="space-y-2 border-t px-4 py-3" style={{ borderColor: "var(--border)" }}>
-      <Select value={kind} onChange={(e) => setKind(e.target.value)} className="text-xs">
-        {["BROCHURE", "CERTIFICATE", "CONTRACT", "PHOTO", "OTHER"].map((k) => (
-          <option key={k} value={k}>{titleCase(k)}</option>
-        ))}
-      </Select>
-      <input
-        ref={inputRef}
-        type="file"
-        className="block w-full text-xs"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
+      <Field label="Filing it as">
+        <Select value={kind} onChange={(e) => setKind(e.target.value)}>
+          {["BROCHURE", "CERTIFICATE", "CONTRACT", "PHOTO", "OTHER"].map((k) => (
+            <option key={k} value={k}>{titleCase(k)}</option>
+          ))}
+        </Select>
+      </Field>
+      <FileUpload
+        label={kind === "BROCHURE" ? "Upload the brochure" : "Upload a file"}
+        busy={busy}
+        onFile={async (file) => {
           setBusy(true);
           try {
             const form = new FormData();
@@ -384,7 +382,6 @@ function UploadFile({
             form.append("kind", kind);
             form.append("company_id", companyId);
             await uploadFile(form);
-            if (inputRef.current) inputRef.current.value = "";
             onSaved();
           } catch (err) {
             onError(err instanceof ApiError ? err.message : "Upload failed.");
@@ -393,7 +390,6 @@ function UploadFile({
           }
         }}
       />
-      {busy ? <p className="text-xs" style={{ color: "var(--text-muted)" }}>Uploading…</p> : null}
     </div>
   );
 }

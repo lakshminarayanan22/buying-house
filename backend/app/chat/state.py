@@ -37,6 +37,7 @@ class ChatState(TypedDict, total=False):
     """
 
     question: str
+    page_context: str | None
     user_id: str
     user_role: Literal["ADMIN", "MEMBER"]
 

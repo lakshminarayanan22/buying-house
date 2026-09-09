@@ -53,6 +53,119 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Accent palettes.
+
+   Only the accent family and the page ground move. Danger/success/warning stay
+   put in every palette: those carry meaning, and a green that shifts with the
+   theme stops reading as "paid".
+
+   Ordering here is load-bearing. `:root[data-theme=x]` outweighs a bare `:root`,
+   so a light palette block would otherwise beat the dark base block and every
+   theme would be stuck in light mode. The dark overrides below have identical
+   specificity and come later in the file, which is what settles it — so each
+   palette must define the SAME five tokens in both halves. Drop one from the
+   dark half and that token silently keeps its light value.
+   --------------------------------------------------------------------------- */
+
+:root[data-theme="slate"] {
+  --bg: #f6f7f9;
+  --accent: #2f4f7f;
+  --accent-hover: #263f66;
+  --accent-fg: #ffffff;
+  --accent-soft: #eaf0f8;
+}
+
+:root[data-theme="indigo"] {
+  --bg: #f7f7fb;
+  --accent: #4c46b6;
+  --accent-hover: #3d38a0;
+  --accent-fg: #ffffff;
+  --accent-soft: #eeedfb;
+}
+
+:root[data-theme="teal"] {
+  --bg: #f5f8f8;
+  --accent: #0f6b6b;
+  --accent-hover: #0b5555;
+  --accent-fg: #ffffff;
+  --accent-soft: #e3f1f0;
+}
+
+:root[data-theme="forest"] {
+  --bg: #f6f8f6;
+  --accent: #2c6b3f;
+  --accent-hover: #235532;
+  --accent-fg: #ffffff;
+  --accent-soft: #e8f3ea;
+}
+
+:root[data-theme="terracotta"] {
+  --bg: #faf7f5;
+  --accent: #a1462a;
+  --accent-hover: #843722;
+  --accent-fg: #ffffff;
+  --accent-soft: #fbeee9;
+}
+
+:root[data-theme="graphite"] {
+  --bg: #f6f7f8;
+  --accent: #3a4048;
+  --accent-hover: #272c33;
+  --accent-fg: #ffffff;
+  --accent-soft: #eef0f2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="slate"] {
+    --bg: #0e1116;
+    --accent: #7ba3dd;
+    --accent-hover: #96b6e6;
+    --accent-fg: #0e1116;
+    --accent-soft: #1a2534;
+  }
+
+  :root[data-theme="indigo"] {
+    --bg: #100f18;
+    --accent: #a6a1f0;
+    --accent-hover: #bcb8f5;
+    --accent-fg: #100f18;
+    --accent-soft: #211f38;
+  }
+
+  :root[data-theme="teal"] {
+    --bg: #0b1214;
+    --accent: #5fc4bd;
+    --accent-hover: #7fd4ce;
+    --accent-fg: #0b1214;
+    --accent-soft: #122a29;
+  }
+
+  :root[data-theme="forest"] {
+    --bg: #0c120e;
+    --accent: #74c088;
+    --accent-hover: #90d0a1;
+    --accent-fg: #0c120e;
+    --accent-soft: #16281c;
+  }
+
+  :root[data-theme="terracotta"] {
+    --bg: #14100e;
+    --accent: #e59277;
+    --accent-hover: #efa78e;
+    --accent-fg: #14100e;
+    --accent-soft: #2e1c16;
+  }
+
+  :root[data-theme="graphite"] {
+    --bg: #101215;
+    --accent: #b8c0c9;
+    --accent-hover: #ced5dc;
+    --accent-fg: #101215;
+    --accent-soft: #232830;
+  }
+}
+
 html,
 body {
   background: var(--bg);

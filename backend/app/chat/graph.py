@@ -84,7 +84,7 @@ _compiled = None
 
 
 def answer(question: str, *, user_id: str | None = None,
-           user_role: str = "MEMBER") -> ChatState:
+           user_role: str = "MEMBER", context: str | None = None) -> ChatState:
     """Run one question through the graph."""
     global _compiled
     if _compiled is None:
@@ -94,6 +94,7 @@ def answer(question: str, *, user_id: str | None = None,
         logger.warning("LLM_BACKEND=stub — keyword routing and templated answers, not a chatbot")
 
     return _compiled.invoke({
-        "question": question, "user_id": user_id or "", "user_role": user_role,
+        "question": question, "page_context": context,
+        "user_id": user_id or "", "user_role": user_role,
         "retrieved": [], "citations": [], "trace": [],
     })
