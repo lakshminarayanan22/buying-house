@@ -23,7 +23,7 @@ from app.enums import (
     DealStatus,
     MilestoneStatus,
     ReferenceDomain as D,
-    UserRole,
+    UserRole, UserStatus,
 )
 from app.models import (
     Company,
@@ -67,7 +67,7 @@ def seed_demo(db: Session) -> None:
     user = db.scalars(select(User).where(User.email == "ops@ecolink.example")).first()
     if user is None:
         user = User(name="Ecolink Ops", email="ops@ecolink.example", role=UserRole.ADMIN,
-                    password_hash=hash_password("ChangeMe123!"))
+                    status=UserStatus.ACTIVE, password_hash=hash_password("ChangeMe123!"))
         db.add(user)
         db.flush()
 

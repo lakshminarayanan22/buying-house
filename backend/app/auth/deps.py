@@ -20,6 +20,8 @@ def current_user(
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired session")
 
     user = db.get(User, user_id)
+    # `is_active` is status == ACTIVE: a pending, declined or disabled account holds no session
+    # even if it somehow has a token.
     if user is None or not user.is_active or token_version != user.token_version:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired session")
     return user

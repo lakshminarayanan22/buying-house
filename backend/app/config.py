@@ -13,6 +13,28 @@ class Settings(BaseSettings):
     # Database. pgvector is enabled in the first migration so Phase 6 only has to add columns.
     database_url: str = "postgresql+psycopg://bh:bh@localhost:5432/ecolink"
 
+    # --- Sign-in ---
+    # Google is the front door; only this Workspace domain gets through it. `hd` is checked as
+    # well as the address, because `hd` is set by Google from the Workspace an account belongs
+    # to and cannot be chosen by the person signing in.
+    #
+    # google: verify real ID tokens. Needs GOOGLE_CLIENT_ID.
+    # stub:   accept a typed address as if Google had vouched for it, so the approval flow can
+    #         be exercised with no Google project. Refused outright outside a local environment
+    #         — see check_sign_in_config().
+    google_auth_backend: str = "stub"
+    google_client_id: str | None = None
+    allowed_email_domain: str = "ecolinksolutions.in"
+    # Comma-separated. These addresses are approved as ADMIN on their first Google sign-in, which
+    # is how the very first request ever gets approved. Adding someone here later also promotes
+    # them the next time they sign in.
+    bootstrap_admin_emails: str = ""
+    password_min_length: int = 10
+
+    @property
+    def bootstrap_admins(self) -> set[str]:
+        return {e.strip().lower() for e in self.bootstrap_admin_emails.split(",") if e.strip()}
+
     # --- Chatbot ---
     # stub: keyword routing and templated answers. No key, no spend, and it makes the graph
     #       testable. It is not a chatbot and reindex-style warnings say so.
@@ -70,11 +92,14 @@ class Settings(BaseSettings):
     s3_bucket: str = "buying-house-documents"
     s3_region: str = "us-east-1"
 
-    # Notification channels. Everything writes to the outbox table first (§7); the dispatcher
-    # is swappable so WhatsApp Cloud API / Resend drop in later without touching business logic.
+    # Email — used to tell admins someone is waiting, and to tell that person they are in.
+    # console: log the message instead of sending it.
+    # smtp:    send it. On Google Workspace that is smtp.gmail.com:587 with an app password for
+    #          the sending mailbox, or smtp-relay.gmail.com if the Workspace admin prefers the
+    #          relay. docs/sign-in.md has the steps.
     email_backend: str = "console"     # console | smtp
     whatsapp_backend: str = "console"  # console | cloud_api
-    email_from: str = "no-reply@buyinghouse.example"
+    email_from: str = "Ecolink <no-reply@ecolinksolutions.in>"
     smtp_host: str | None = None
     smtp_port: int = 587
     smtp_username: str | None = None
@@ -97,6 +122,28 @@ class Settings(BaseSettings):
     @property
     def is_local(self) -> bool:
         return self.environment.lower() in {"local", "dev", "development", "test"}
+
+    def check_sign_in_config(self) -> None:
+        """Refuse to start with a sign-in setup that would let the wrong people in.
+
+        The stub backend believes whatever address it is given. That is the point of it on a
+        laptop and a hole anywhere else, so outside a local environment it is a startup error
+        rather than a warning somebody might not read.
+        """
+        backend = self.google_auth_backend.lower()
+        if backend not in {"google", "stub"}:
+            raise RuntimeError(f"GOOGLE_AUTH_BACKEND must be 'google' or 'stub', not {backend!r}")
+        if backend == "stub" and not self.is_local:
+            raise RuntimeError(
+                "GOOGLE_AUTH_BACKEND=stub accepts any typed address and is only allowed when "
+                f"ENVIRONMENT is local. ENVIRONMENT is {self.environment!r}."
+            )
+        if backend == "google" and not self.google_client_id:
+            raise RuntimeError("GOOGLE_AUTH_BACKEND=google needs GOOGLE_CLIENT_ID")
+        if "@" in self.allowed_email_domain or not self.allowed_email_domain.strip():
+            raise RuntimeError("ALLOWED_EMAIL_DOMAIN is a bare domain, e.g. ecolinksolutions.in")
+        if not self.is_local and self.jwt_secret.startswith("dev-only"):
+            raise RuntimeError("JWT_SECRET is still the development default")
 
 
 @lru_cache

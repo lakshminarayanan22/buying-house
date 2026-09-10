@@ -57,6 +57,13 @@ export function money(value: number | null | undefined, currency = "USD"): strin
 }
 
 /** "3 days ago" / "today" — the gone-quiet list is read in days, not dates. */
+/** "3 days ago" from an ISO timestamp. */
+export function since(iso: string | null | undefined): string {
+  if (!iso) return "never";
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  return daysAgo(days);
+}
+
 export function daysAgo(days: number | null | undefined): string {
   if (days === null || days === undefined) return "—";
   if (days <= 0) return "today";

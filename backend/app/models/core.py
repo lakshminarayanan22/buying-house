@@ -1,14 +1,15 @@
 """Users, documents and the audit trail.
 
-Three or four people at Ecolink use this and nobody outside does, so the user model is a name,
-an email and one of two roles. Everything that existed to manage external logins — invitations,
-OTP challenges, per-org scoping, identity reveals — is gone.
+Only Ecolink staff use this, and only through an @ecolinksolutions.in Google account. Signing in
+creates the account in PENDING; an admin approves it once. The user model is a name, an email,
+one of two roles, and where the person is in that approval.
 """
 import uuid
 from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -19,7 +20,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.enums import ActivityAction, DocumentKind, ExtractionStatus, UserRole
+from app.enums import ActivityAction, DocumentKind, ExtractionStatus, UserRole, UserStatus
 from app.models.base import Base, JSONVariant, TimestampMixin, uuid_pk
 
 
@@ -33,13 +34,44 @@ class User(Base, TimestampMixin):
     role: Mapped[UserRole] = mapped_column(
         String(16), nullable=False, default=UserRole.MEMBER, server_default=UserRole.MEMBER.value
     )
+    # Optional. Google is how an account comes into being; a password is a second way into an
+    # account that already exists and has been approved. Nobody can create an account with one.
     password_hash: Mapped[str | None] = mapped_column(String(255))
-    is_active: Mapped[bool] = mapped_column(nullable=False, default=True, server_default="true")
+    status: Mapped[UserStatus] = mapped_column(
+        String(16), nullable=False, default=UserStatus.PENDING,
+        server_default=UserStatus.PENDING.value, index=True,
+    )
+    # Google's `sub` claim: the account's permanent id. Matched before the email, because an
+    # address can be renamed inside Workspace and a sub never changes.
+    google_sub: Mapped[str | None] = mapped_column(String(64))
+    avatar_url: Mapped[str | None] = mapped_column(String(500))
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # The last access decision, and who made it. Null until an admin has acted — or for the
+    # bootstrap admins named in config, who are let in by configuration rather than by a person.
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reviewed_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
+    )
+
     # Bumped to invalidate every outstanding session for this user at once.
     token_version: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
 
-    __table_args__ = (UniqueConstraint("email", name="uq_app_user_email"),)
+    @property
+    def is_active(self) -> bool:
+        return self.status == UserStatus.ACTIVE
+
+    @property
+    def has_password(self) -> bool:
+        return self.password_hash is not None
+
+    __table_args__ = (
+        UniqueConstraint("email", name="uq_app_user_email"),
+        UniqueConstraint("google_sub", name="uq_app_user_google_sub"),
+        CheckConstraint(
+            "status IN ('PENDING', 'ACTIVE', 'REJECTED', 'DISABLED')", name="status_known"
+        ),
+    )
 
 
 class Document(Base, TimestampMixin):

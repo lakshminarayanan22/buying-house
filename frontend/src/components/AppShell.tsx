@@ -5,10 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { AskDock } from "@/components/AskDock";
-import { AppearanceToggle } from "@/components/AppearanceToggle";
 import { BrandMark } from "@/components/BrandMark";
+import { ProfileMenu } from "@/components/ProfileMenu";
 import { useSession } from "@/lib/session";
-import { Badge, Button, Lamp, cx } from "@/components/ui";
+import { usePendingCount } from "@/lib/team";
+import { Badge, Lamp, cx } from "@/components/ui";
 import { titleCase } from "@/lib/format";
 
 const NAV = [
@@ -18,8 +19,12 @@ const NAV = [
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, signOut } = useSession();
+  const { user } = useSession();
   const pathname = usePathname();
+  const isAdmin = user?.role === "ADMIN";
+  const pending = usePendingCount(isAdmin, pathname);
+  // Team is where access is granted, so only admins see it.
+  const nav = isAdmin ? [...NAV, { href: "/team", label: "Team" }] : NAV;
 
   return (
     <div className="min-h-dvh">
@@ -45,7 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
 
           <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-            {NAV.map((item) => {
+            {nav.map((item) => {
               const active =
                 item.href === "/"
                   ? pathname === "/"
@@ -65,22 +70,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   }}
                 >
                   {item.label}
+                  {item.href === "/team" && pending ? (
+                    <span
+                      className="readout ml-1.5 inline-grid min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-semibold"
+                      style={{ background: "var(--warning)", color: "var(--bg)" }}
+                      title={`${pending} waiting for approval`}
+                    >
+                      {pending}
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}
           </nav>
 
-          <div className="flex shrink-0 items-center gap-3">
-            {user ? (
-              <div className="hidden text-right sm:block">
-                <div className="text-xs font-medium">{user.name}</div>
-                <div className="micro">{titleCase(user.role)}</div>
-              </div>
-            ) : null}
-            <AppearanceToggle />
-            <Button size="sm" variant="ghost" onClick={() => void signOut()}>
-              Sign out
-            </Button>
+          <div className="flex shrink-0 items-center">
+            <ProfileMenu />
           </div>
         </div>
       </header>

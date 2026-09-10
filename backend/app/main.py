@@ -13,6 +13,9 @@ from app.config import settings
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
+# Fail at boot, not at the first sign-in, if the sign-in setup would let the wrong people in.
+settings.check_sign_in_config()
+
 app = FastAPI(
     title="Ecolink",
     version="0.2.0",

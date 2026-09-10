@@ -10,11 +10,48 @@ export type CommissionBasis = "PERCENTAGE" | "MARGIN" | "FIXED" | "NONE";
 export type CommissionStatus = "NOT_DUE" | "DUE" | "INVOICED" | "RECEIVED" | "WRITTEN_OFF";
 export type MilestoneStatus = "PENDING" | "IN_PROGRESS" | "DONE" | "BLOCKED" | "SKIPPED";
 
+export type UserStatus = "PENDING" | "ACTIVE" | "REJECTED" | "DISABLED";
+
 export interface Me {
   id: string;
   name: string;
   email: string;
   role: UserRole;
+  avatar_url: string | null;
+  has_password: boolean;
+  google_linked: boolean;
+}
+
+export interface AuthConfig {
+  google_backend: "google" | "stub";
+  google_client_id: string | null;
+  allowed_domain: string;
+  password_login: boolean;
+}
+
+/** Every recognised outcome of a Google sign-in. Only ACTIVE carries a token. */
+export interface SignInResult {
+  status: UserStatus;
+  access_token: string | null;
+  name: string;
+  email: string;
+  message: string;
+  newly_requested: boolean;
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  avatar_url: string | null;
+  has_password: boolean;
+  google_linked: boolean;
+  created_at: string;
+  last_login_at: string | null;
+  reviewed_at: string | null;
+  reviewed_by_name: string | null;
 }
 
 export interface Ref {

@@ -13,6 +13,21 @@ class UserRole(StrEnum):
     MEMBER = "MEMBER"    # everything except user management and master data
 
 
+class UserStatus(StrEnum):
+    """Where a person is in getting access.
+
+    Signing in with Google creates the account; it does not grant access. An admin does that,
+    once, and from then on the person goes straight in. The four states and the moves between
+    them are enforced in one place — app/services/access.py — rather than wherever a status
+    happens to be written.
+    """
+
+    PENDING = "PENDING"      # signed in with Google, waiting for an admin
+    ACTIVE = "ACTIVE"        # can use the application
+    REJECTED = "REJECTED"    # an admin declined the request
+    DISABLED = "DISABLED"    # had access, and it was switched off (left the company, etc.)
+
+
 class CompanyStatus(StrEnum):
     LEAD = "LEAD"            # we know of them, nothing agreed
     ACTIVE = "ACTIVE"
@@ -118,6 +133,15 @@ class ActivityAction(StrEnum):
     UPLOAD = "UPLOAD"
     LOGIN = "LOGIN"
     NOTE = "NOTE"
+    # Access lifecycle. Kept distinct from STATUS_CHANGE so "who let this person in, and when"
+    # is one indexed query rather than a search through JSON diffs.
+    ACCESS_REQUESTED = "ACCESS_REQUESTED"
+    ACCESS_APPROVED = "ACCESS_APPROVED"
+    ACCESS_REJECTED = "ACCESS_REJECTED"
+    ACCESS_DISABLED = "ACCESS_DISABLED"
+    ACCESS_RESTORED = "ACCESS_RESTORED"
+    ROLE_CHANGE = "ROLE_CHANGE"
+    PASSWORD_SET = "PASSWORD_SET"
 
 
 class ExtractionStatus(StrEnum):

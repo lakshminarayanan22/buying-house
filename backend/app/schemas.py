@@ -15,6 +15,7 @@ from app.enums import (
     DocumentKind,
     MilestoneStatus,
     UserRole,
+    UserStatus,
 )
 
 
@@ -41,6 +42,69 @@ class Me(ORM):
     id: uuid.UUID
     name: str
     email: str
+    role: UserRole
+    avatar_url: str | None = None
+    has_password: bool = False
+    # Linked to a Google account. Always true for anyone who arrived through Google; false
+    # only for accounts created before Google sign-in existed (the demo seed).
+    google_linked: bool = False
+
+
+class AuthConfig(BaseModel):
+    """What the login screen needs to render itself. Public: it holds nothing secret — a
+    Google OAuth client id is designed to be shipped to browsers."""
+
+    google_backend: str                # "google" | "stub"
+    google_client_id: str | None
+    allowed_domain: str
+    password_login: bool = True
+
+
+class GoogleSignInBody(BaseModel):
+    credential: str = Field(min_length=1, max_length=8192)
+
+
+class SignInResult(BaseModel):
+    """The outcome of a Google sign-in.
+
+    Every recognised state is a 200 with a status, not an error code: "you're waiting for
+    approval" is a normal, expected answer the login screen draws a page for. Only ACTIVE
+    carries a token — a pending account can prove who it is but can't touch anything.
+    """
+
+    status: UserStatus
+    access_token: str | None = None
+    name: str
+    email: str
+    message: str
+    newly_requested: bool = False
+
+
+class PasswordBody(BaseModel):
+    current_password: str | None = Field(None, max_length=200)
+    new_password: str = Field(min_length=1, max_length=200)
+
+
+class TeamMember(ORM):
+    id: uuid.UUID
+    name: str
+    email: str
+    role: UserRole
+    status: UserStatus
+    avatar_url: str | None
+    has_password: bool
+    google_linked: bool
+    created_at: datetime
+    last_login_at: datetime | None
+    reviewed_at: datetime | None
+    reviewed_by_name: str | None = None
+
+
+class ApproveBody(BaseModel):
+    role: UserRole = UserRole.MEMBER
+
+
+class RoleBody(BaseModel):
     role: UserRole
 
 

@@ -7,7 +7,7 @@
  * separate origin and issues a bearer token; there is no cookie for it to set. A 401 clears
  * the session and bounces to the login screen, so a revoked user cannot linger in a stale UI.
  */
-import type { Me } from "./types";
+import type { Me, SignInResult } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 const TOKEN_KEY = "bh.session";
@@ -161,4 +161,18 @@ export async function uploadFile(form: FormData): Promise<unknown> {
     throw new ApiError(response.status, messageFrom(payload, "Upload failed"), payload);
   }
   return response.json();
+}
+
+/**
+ * Hand Google's credential to the backend. Only an ACTIVE result carries a session; anything
+ * else — waiting, declined, switched off — comes back for the login screen to explain, and
+ * nothing is stored.
+ */
+export async function googleSignIn(credential: string): Promise<SignInResult> {
+  const result = await request<SignInResult>("/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ credential }),
+  });
+  if (result.status === "ACTIVE" && result.access_token) setToken(result.access_token);
+  return result;
 }
