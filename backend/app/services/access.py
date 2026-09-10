@@ -30,6 +30,9 @@ from app.models import ActivityLog, User
 from app.services.mailer import Email
 
 
+STUB_SUB_PREFIX = "stub-"     # see app/auth/google.py:_stub_identity
+
+
 class AccessError(Exception):
     """A request the rules refuse. Carries the HTTP status the API should answer with."""
 
@@ -63,14 +66,19 @@ def sign_in_with_google(db: Session, identity: GoogleIdentity) -> tuple[User, bo
         user = db.scalars(
             select(User).where(func.lower(User.email) == identity.email)
         ).first()
-        if user is not None and user.google_sub and user.google_sub != identity.sub:
+        # A `stub-` sub was written by the local development sign-in, not by Google, so it is no
+        # real link: the first genuine Google sign-in for that verified address takes it over.
+        # Without this, everyone who tried the app before GOOGLE_CLIENT_ID was set would be
+        # locked out the day real Google sign-in is switched on.
+        if (user is not None and user.google_sub and user.google_sub != identity.sub
+                and not user.google_sub.startswith(STUB_SUB_PREFIX)):
             # Same address, different Google account. Workspace can recycle an address after
             # someone leaves; that must never inherit the previous person's access.
             raise AccessError(
                 "This address is linked to a different Google account. Ask an admin.", 403
             )
         if user is not None:
-            user.google_sub = identity.sub      # an existing password account, now linked
+            user.google_sub = identity.sub      # a password or stub account, now truly linked
 
     created = user is None
     if created:

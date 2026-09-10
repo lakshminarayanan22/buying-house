@@ -129,6 +129,7 @@ def _stub_identity(credential: str) -> GoogleIdentity:
     if "@" not in email:
         raise GoogleAuthError("Stub credential needs an email address")
     return GoogleIdentity(
+        # The prefix matters: access.py lets a real Google sign-in replace a stub link.
         sub=f"stub-{email}",
         email=email,
         name=name.strip() or email.split("@")[0].replace(".", " ").title(),

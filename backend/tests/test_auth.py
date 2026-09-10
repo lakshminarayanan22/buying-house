@@ -284,6 +284,24 @@ def test_password_login_refuses_anyone_not_approved(env):
     assert r.json()["detail"] == "Invalid credentials"   # no hint that the account exists
 
 
+def test_accounts_made_in_development_survive_the_switch_to_real_google(env, monkeypatch):
+    """Sign in with the stub, get approved, then Google is switched on: the real Google
+    account takes over the stub link instead of tripping the recycled-address guard."""
+    body = env.google(f"boss@{DOMAIN}", "The Boss").json()
+    assert body["status"] == "ACTIVE"
+    assert env.user(f"boss@{DOMAIN}").google_sub == f"stub-boss@{DOMAIN}"
+
+    _real_google(monkeypatch, _claims(sub="real-google-7781", email=f"boss@{DOMAIN}", name="The Boss"))
+    real = env.client.post("/api/auth/google", json={"credential": "x"})
+    assert real.status_code == 200 and real.json()["status"] == "ACTIVE"
+    assert env.user(f"boss@{DOMAIN}").google_sub == "real-google-7781"
+    assert env.user(f"boss@{DOMAIN}").role == UserRole.ADMIN
+
+    # ...and once it's a real link, the guard is back in force for a different Google account.
+    _real_google(monkeypatch, _claims(sub="someone-else-0001", email=f"boss@{DOMAIN}"))
+    assert env.client.post("/api/auth/google", json={"credential": "x"}).status_code == 403
+
+
 # ------------------------------------------------------------------- the real Google path
 def _real_google(monkeypatch, claims: dict | Exception):
     monkeypatch.setattr(settings, "google_auth_backend", "google")
