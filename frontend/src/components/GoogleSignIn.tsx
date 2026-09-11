@@ -131,7 +131,14 @@ export function GoogleSignIn({
   );
 }
 
-/** Development stand-in: type the address Google would have vouched for. */
+/**
+ * Test-mode stand-in for the Google button: one box, your Ecolink email.
+ *
+ * It used to ask for "Google account" and "Name on the account", and people couldn't tell what
+ * either was for. The name was never needed — real Google supplies it, and here it is read off
+ * the address (priya.raman@ → Priya Raman) — so it went, leaving a single field whose label
+ * says exactly what to type.
+ */
 function StubSignIn({
   domain,
   busy,
@@ -142,39 +149,43 @@ function StubSignIn({
   onCredential: (credential: string) => void;
 }) {
   const [email, setEmail] = React.useState("");
-  const [name, setName] = React.useState("");
+  const typed = email.trim().toLowerCase();
+  const after = typed.includes("@") ? typed.slice(typed.indexOf("@") + 1) : "";
+  // Only once they've typed past the @, and only once what follows can no longer become our
+  // domain — so "lakshmi@ecol" doesn't nag mid-word, but "lakshmi@gmail" does.
+  const wrongDomain = after.length > 0 && !domain.startsWith(after);
 
   return (
     <form
       className="space-y-3"
       onSubmit={(e) => {
         e.preventDefault();
-        onCredential(`stub:${email.trim()}|${name.trim()}`);
+        onCredential(`stub:${typed}`);
       }}
     >
-      <div
-        className="rounded-md px-3 py-2 text-[11px] leading-relaxed"
-        style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
+      <Field
+        label="Your Ecolink email address"
+        hint={wrongDomain ? undefined : `The one ending in @${domain}`}
+        error={wrongDomain ? `That isn't an @${domain} address — only Ecolink emails can sign in.` : null}
       >
-        <strong>Development sign-in.</strong> Google isn&apos;t configured, so this stands in for
-        it. The domain rule and the approval queue still apply. The server refuses to start
-        with this mode outside local development.
-      </div>
-      <Field label="Google account">
         <Input
           type="email"
-          placeholder={`you@${domain}`}
+          autoComplete="email"
+          autoFocus
+          placeholder={`yourname@${domain}`}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
       </Field>
-      <Field label="Name on the account">
-        <Input placeholder="Priya Raman" value={name} onChange={(e) => setName(e.target.value)} />
-      </Field>
-      <Button type="submit" variant="primary" loading={busy} className="w-full">
-        Continue as this Google account
+      <Button type="submit" variant="primary" loading={busy} disabled={wrongDomain} className="w-full">
+        Sign in
       </Button>
+      <p className="text-[11px] leading-relaxed" style={{ color: "var(--text-subtle)" }}>
+        <span className="font-medium" style={{ color: "var(--warning)" }}>Test mode.</span>{" "}
+        Google sign-in isn&apos;t connected yet, so for now you just type your email. Once it is,
+        this box becomes the usual &ldquo;Sign in with Google&rdquo; button.
+      </p>
     </form>
   );
 }

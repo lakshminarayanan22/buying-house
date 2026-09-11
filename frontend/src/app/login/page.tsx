@@ -121,16 +121,23 @@ function SignIn({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-sm font-semibold">Sign in</h2>
-        <p className="mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
-          Use your <span className="readout">@{config.allowed_domain}</span> Google account.
-          First time? Signing in sends a request to the admins.
+        <h2 className="text-sm font-semibold">Sign in to Ecolink</h2>
+        <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
+          Use your <span className="readout">@{config.allowed_domain}</span> email.
+        </p>
+        <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-subtle)" }}>
+          First time here? You&apos;ll be asked to wait while an admin approves you. That only
+          happens once.
         </p>
       </div>
 
       {error ? <Alert>{error}</Alert> : null}
 
-      <GoogleSignIn config={config} busy={busy} onCredential={onCredential} />
+      {/* One way in on screen at a time. Showing both put two email boxes and two "Sign in"
+          buttons on the same card, and nobody could tell which one to use. */}
+      {withPassword ? null : (
+        <GoogleSignIn config={config} busy={busy} onCredential={onCredential} />
+      )}
 
       {config.password_login ? (
         withPassword ? (
@@ -169,8 +176,7 @@ function PasswordForm({
 
   return (
     <form
-      className="space-y-3 border-t pt-4"
-      style={{ borderColor: "var(--border)" }}
+      className="space-y-3"
       onSubmit={(e) => {
         e.preventDefault();
         setBusy(true);
@@ -187,7 +193,7 @@ function PasswordForm({
       }}
     >
       {error ? <Alert>{error}</Alert> : null}
-      <Field label="Email">
+      <Field label="Your Ecolink email address">
         <Input type="email" autoComplete="username" value={email}
                onChange={(e) => setEmail(e.target.value)} required />
       </Field>
@@ -195,13 +201,13 @@ function PasswordForm({
         <Input type="password" autoComplete="current-password" value={password}
                onChange={(e) => setPassword(e.target.value)} required />
       </Field>
-      <p className="text-[11px]" style={{ color: "var(--text-subtle)" }}>
-        Only works once your account is approved and you&apos;ve added a password from your
-        Account page.
+      <p className="text-[11px] leading-relaxed" style={{ color: "var(--text-subtle)" }}>
+        Only if you&apos;ve already added a password from <em>Your account</em>. Signing in for
+        the first time? Go back and use your email instead.
       </p>
       <div className="flex gap-2">
         <Button type="submit" variant="primary" loading={busy} className="flex-1">
-          Sign in
+          Sign in with password
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel}>Back</Button>
       </div>
