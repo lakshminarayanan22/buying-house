@@ -7,6 +7,20 @@ import app.models as m
 from app.seed.taxonomy import seed_taxonomy
 
 
+@pytest.fixture(autouse=True)
+def _offline_backends(monkeypatch):
+    """Every test runs against the stub model and stub embeddings, whatever backend/.env says.
+
+    Once a real VOYAGE_API_KEY went into .env, the retrieval tests started calling Voyage for
+    real — spending tokens, depending on the network, and failing on the free tier's rate
+    limit. A test that needs a real-looking backend fakes the client itself (see
+    test_embedding.py) and sets the backend explicitly, which overrides this.
+    """
+    from app.config import settings
+    monkeypatch.setattr(settings, "embedding_backend", "stub")
+    monkeypatch.setattr(settings, "llm_backend", "stub")
+
+
 @pytest.fixture()
 def db():
     engine = create_engine("sqlite:///:memory:")

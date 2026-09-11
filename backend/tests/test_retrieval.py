@@ -3,6 +3,7 @@
 pgvector, tsvector and the RRF query are all Postgres features; testing them on SQLite would
 test something else entirely.
 """
+import importlib
 import os
 import pathlib
 import uuid
@@ -263,6 +264,18 @@ def test_search_returns_citations(db, corpus):
     hits = search(db, "sinker machines")
     assert hits
     assert hits[0].citation.startswith("Kovai Knits profile #")
+
+
+def test_search_survives_the_embedding_service_failing(db, corpus, monkeypatch):
+    """Voyage throttled or unreachable: the question still gets its keyword matches."""
+    def down(*_a, **_k):
+        raise RuntimeError("429 rate limited")
+    # `app.retrieval.search` names the function once the package is imported; patch the module.
+    monkeypatch.setattr(importlib.import_module("app.retrieval.search"), "embed_one", down)
+
+    hits = search(db, "sinker machines")
+    assert hits and hits[0].citation.startswith("Kovai Knits profile #")
+    assert all(h.matched_by == "keyword" for h in hits)
 
 
 def test_empty_query_returns_nothing(db, corpus):

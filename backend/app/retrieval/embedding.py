@@ -51,6 +51,17 @@ def _stub_vector(text: str) -> list[float]:
 # of its text cap.
 VOYAGE_BATCH = 128
 
+# The client retries rate-limit and availability errors with exponential backoff (1s, 2s, 4s…
+# capped at 16s), but only if asked: its default is zero retries, so one throttled reply failed
+# the call outright. Indexing a document can afford to wait out a busy minute. A person asking a
+# question can't, and search falls back to keyword matching instead (see search.py), so queries
+# get a single quick retry.
+# Eight retries back off for about 80 seconds in total — enough to outlast one throttled minute
+# on Voyage's no-payment-method tier (3 requests a minute). Six was not; the first real reindex
+# ran out after 35 seconds.
+VOYAGE_RETRIES_DOCUMENT = 8
+VOYAGE_RETRIES_QUERY = 1
+
 
 def _voyage(texts: list[str], *, is_query: bool) -> list[list[float]]:
     import voyageai
@@ -58,7 +69,11 @@ def _voyage(texts: list[str], *, is_query: bool) -> list[list[float]]:
     if not settings.voyage_api_key:
         raise RuntimeError("EMBEDDING_BACKEND=voyage but VOYAGE_API_KEY is not set")
 
-    client = voyageai.Client(api_key=settings.voyage_api_key)
+    client = voyageai.Client(
+        api_key=settings.voyage_api_key,
+        max_retries=VOYAGE_RETRIES_QUERY if is_query else VOYAGE_RETRIES_DOCUMENT,
+        timeout=30,
+    )
     vectors: list[list[float]] = []
     # Voyage refuses a request over 1,000 texts, and caps its tokens too (320K on voyage-4).
     # A document's chunks all arrive here in one call, so a long brochure would be rejected

@@ -11,11 +11,15 @@ import re
 import uuid
 from dataclasses import dataclass
 
+import logging
+
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.retrieval.embedding import embed_one
+
+logger = logging.getLogger(__name__)
 
 # The constant in RRF. 60 is the value from the original paper and is not worth tuning before
 # there is an eval set to tune it against.
@@ -68,6 +72,7 @@ WITH semantic AS (
     SELECT id, ROW_NUMBER() OVER (ORDER BY embedding <=> CAST(:qvec AS vector)) AS rank
     FROM document_chunk
     WHERE embedding IS NOT NULL
+      AND CAST(:qvec AS vector) IS NOT NULL      -- no query vector: keyword side only
       AND (CAST(:company_id AS uuid) IS NULL OR company_id = CAST(:company_id AS uuid))
       AND (CAST(:deal_id    AS uuid) IS NULL OR deal_id    = CAST(:deal_id    AS uuid))
     ORDER BY embedding <=> CAST(:qvec AS vector)
@@ -126,8 +131,17 @@ def search(
         # tsquery would make to_tsquery raise, so fall back to a term that matches nothing.
         tsq = "zzzznomatchzzzz"
 
+    try:
+        qvec: str | None = str(embed_one(query, is_query=True))
+    except Exception as exc:     # throttled, down, unreachable, misconfigured
+        # The keyword half needs nothing from the embedding service, so a failure there should
+        # cost the question its semantic matches, not the whole answer. Rare-term questions —
+        # a machine model, a finish name — are exactly the ones keyword search handles well.
+        logger.warning("query embedding failed; searching by keyword only: %s", exc)
+        qvec = None
+
     rows = db.execute(_SQL, {
-        "qvec": str(embed_one(query, is_query=True)),
+        "qvec": qvec,
         "tsq": tsq,
         "company_id": str(company_id) if company_id else None,
         "deal_id": str(deal_id) if deal_id else None,

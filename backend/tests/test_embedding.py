@@ -8,11 +8,13 @@ from app.retrieval import embedding
 class FakeVoyage:
     calls: list[dict] = []
 
-    def __init__(self, api_key):
+    def __init__(self, api_key, max_retries=0, timeout=None):
         assert api_key == "pa-test"
+        self.max_retries = max_retries
 
     def embed(self, texts, model, input_type):
-        FakeVoyage.calls.append({"n": len(texts), "model": model, "input_type": input_type})
+        FakeVoyage.calls.append({"n": len(texts), "model": model, "input_type": input_type,
+                                 "retries": self.max_retries})
 
         class Result:
             # Each vector records which text it came from, so ordering can be checked.
@@ -45,6 +47,9 @@ def test_questions_and_passages_are_embedded_as_different_sides(voyage):
     embedding.embed_many(["chunk-1"])
     embedding.embed_one("chunk-2", is_query=True)
     assert [c["input_type"] for c in voyage.calls] == ["document", "query"]
+    # Indexing waits out a throttled minute; a person's question retries once and then falls
+    # back to keyword search rather than hanging.
+    assert [c["retries"] for c in voyage.calls] == [8, 1]
 
 
 def test_a_missing_key_says_so_rather_than_failing_somewhere_deeper(voyage, monkeypatch):

@@ -124,19 +124,37 @@ def ingest_document(db: Session, document_id: uuid.UUID) -> dict:
     return {"status": status.value, "chunks": len(pieces), "model": model}
 
 
-def reindex_all(db: Session, *, only_missing: bool = False) -> dict:
+def reindex_all(db: Session, *, only_missing: bool = False, only_stale: bool = False) -> dict:
     """Rebuild every document's chunks.
 
     Run this whenever chunk size, the context prefix or the embedding model changes — without
     it those become frightening changes rather than routine ones.
+
+    `only_stale` redoes just the documents with chunks from some other model — how an
+    interrupted switch of embedding model is resumed without paying again for what finished.
     """
     stmt = select(Document.id)
     if only_missing:
         stmt = stmt.where(Document.extraction_status == ExtractionStatus.PENDING)
+    if only_stale:
+        stmt = stmt.where(Document.id.in_(
+            select(DocumentChunk.document_id).where(DocumentChunk.embedding_model != active_model())
+        ))
 
-    totals = {"documents": 0, "chunks": 0, "needs_ocr": 0, "failed": 0, "skipped": 0}
+    totals = {"documents": 0, "chunks": 0, "needs_ocr": 0, "failed": 0, "skipped": 0,
+              "embedding_failed": 0}
     for (doc_id,) in db.execute(stmt).all():
-        result = ingest_document(db, doc_id)
+        try:
+            result = ingest_document(db, doc_id)
+        except Exception as exc:     # the embedding service, almost always
+            # One throttled document used to abort the whole run. Its old chunks are untouched —
+            # ingest only replaces them once new vectors are in hand — so skip it, count it, and
+            # let `--stale` pick it up next time.
+            db.rollback()
+            logger.warning("could not embed document %s, left as it was: %s", doc_id, exc)
+            totals["documents"] += 1
+            totals["embedding_failed"] += 1
+            continue
         totals["documents"] += 1
         totals["chunks"] += result.get("chunks", 0)
         if result["status"] == ExtractionStatus.NEEDS_OCR.value:

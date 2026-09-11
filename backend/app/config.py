@@ -61,7 +61,12 @@ class Settings(BaseSettings):
     embedding_dimensions: int = 1024
     voyage_api_key: str | None = None
 
-    similarity_floor: float = 0.40
+    # Semantic-only matches below this are dropped; keyword matches always survive. 0.40 was a
+    # guess made when only stub vectors existed. First probes with voyage-4-large (Sept 2026):
+    # a reworded question matched its document at 0.37, an unrelated one topped out at 0.16.
+    # 0.30 keeps the first and refuses the second. Provisional — retune with
+    # scripts/eval_retrieval.py once real brochures are uploaded.
+    similarity_floor: float = 0.30
     retrieval_top_k: int = 8
     chunk_size_tokens: int = 500
     chunk_overlap_tokens: int = 80
