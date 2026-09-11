@@ -47,6 +47,11 @@ def _stub_vector(text: str) -> list[float]:
 
 
 # ----------------------------------------------------------------------- voyage
+# 128 chunks of ~500 tokens is ~64K tokens a request: a fifth of Voyage's token cap, an eighth
+# of its text cap.
+VOYAGE_BATCH = 128
+
+
 def _voyage(texts: list[str], *, is_query: bool) -> list[list[float]]:
     import voyageai
 
@@ -54,13 +59,19 @@ def _voyage(texts: list[str], *, is_query: bool) -> list[list[float]]:
         raise RuntimeError("EMBEDDING_BACKEND=voyage but VOYAGE_API_KEY is not set")
 
     client = voyageai.Client(api_key=settings.voyage_api_key)
-    # Voyage distinguishes the two sides of the search. Embedding a question the same way as a
-    # passage measurably hurts retrieval, and it is a one-word mistake to make.
-    result = client.embed(
-        texts, model=settings.embedding_model,
-        input_type="query" if is_query else "document",
-    )
-    return result.embeddings
+    vectors: list[list[float]] = []
+    # Voyage refuses a request over 1,000 texts, and caps its tokens too (320K on voyage-4).
+    # A document's chunks all arrive here in one call, so a long brochure would be rejected
+    # whole; batches of VOYAGE_BATCH keep every request far inside both limits.
+    for start in range(0, len(texts), VOYAGE_BATCH):
+        result = client.embed(
+            texts[start:start + VOYAGE_BATCH], model=settings.embedding_model,
+            # Voyage distinguishes the two sides of the search. Embedding a question the same
+            # way as a passage measurably hurts retrieval, and it is a one-word mistake to make.
+            input_type="query" if is_query else "document",
+        )
+        vectors.extend(result.embeddings)
+    return vectors
 
 
 # ------------------------------------------------------------------------ local

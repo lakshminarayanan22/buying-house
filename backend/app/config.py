@@ -52,10 +52,12 @@ class Settings(BaseSettings):
     # --- Retrieval ---
     # stub: deterministic, no network, no model download. Exercises the pipeline and the
     #       lexical half of hybrid search honestly; the vector half is meaningless.
-    # voyage: voyage-3, 1024 dimensions. Needs VOYAGE_API_KEY.
+    # voyage: voyage-4-large, 1024 dimensions. Needs VOYAGE_API_KEY. (voyage-3, the original
+    #         choice, is legacy as of 2026; voyage-4 and voyage-4-lite are cheaper and also
+    #         1024-d, so switching between them needs a reindex but no migration.)
     # local: sentence-transformers. Needs the package and a model download.
     embedding_backend: str = "stub"
-    embedding_model: str = "voyage-3"
+    embedding_model: str = "voyage-4-large"
     embedding_dimensions: int = 1024
     voyage_api_key: str | None = None
 
