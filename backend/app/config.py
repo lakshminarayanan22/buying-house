@@ -38,11 +38,22 @@ class Settings(BaseSettings):
     # --- Chatbot ---
     # stub: keyword routing and templated answers. No key, no spend, and it makes the graph
     #       testable. It is not a chatbot and reindex-style warnings say so.
+    # ollama: a local open model — Qwen by default. Free, no key, nothing leaves the machine.
+    #         For trying the whole flow before paying for anything; weaker than Claude at
+    #         text-to-SQL, so judge the system's design on it, not its ceiling.
     # claude: the real thing.
     llm_backend: str = "stub"
     anthropic_api_key: str | None = None
     classifier_model: str = "claude-haiku-4-5-20251001"
     branch_model: str = "claude-sonnet-5"
+    # Ollama. One model serves both the classifier and the branches: a second local model
+    # would double the memory held, on a machine that is also running Postgres and the app.
+    ollama_model: str = "qwen3:8b"
+    ollama_base_url: str = "http://localhost:11434"
+    # Ollama's default context is a few thousand tokens and it truncates from the *front*,
+    # silently — the database prompt carries the whole schema, so an overflow would cut the
+    # schema off and leave the model inventing columns. 16K holds schema + question + rows.
+    ollama_num_ctx: int = 16384
     classifier_confidence_floor: float = 0.6
     allow_secondary_category: bool = True
     sql_statement_timeout_ms: int = 2000

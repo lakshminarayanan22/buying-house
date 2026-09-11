@@ -170,7 +170,8 @@ def _database_stub(state: ChatState) -> ChatState:
 
     state["trace"].append(f"database stub: {len(matches)} company matches")
     if not matches:
-        state["answer"] = ("(stub) No text-to-SQL without a model. Set LLM_BACKEND=claude and "
+        state["answer"] = ("(stub) No text-to-SQL without a model. Set LLM_BACKEND=ollama for a "
+                           "free local model, or LLM_BACKEND=claude and "
                            "ANTHROPIC_API_KEY to answer database questions.")
         return state
 

@@ -24,12 +24,43 @@ def is_stub() -> bool:
 
 
 # --------------------------------------------------------------------------- real
-def chat_model(model: str, **kwargs):
-    from langchain_anthropic import ChatAnthropic
+def chat_model(model: str, *, max_tokens: int = 1024):
+    """The model for one step of the graph.
 
-    if not settings.anthropic_api_key:
-        raise RuntimeError("LLM_BACKEND=claude but ANTHROPIC_API_KEY is not set")
-    return ChatAnthropic(model=model, api_key=settings.anthropic_api_key, **kwargs)
+    Callers name the Claude model they would want (a fast one to classify, a stronger one to
+    answer) and a token budget. On the Ollama backend both collapse to the one local model —
+    every call site stays the same, which is what makes switching back to Claude one line in
+    .env rather than a change to the graph.
+    """
+    backend = settings.llm_backend.lower()
+
+    if backend == "claude":
+        from langchain_anthropic import ChatAnthropic
+
+        if not settings.anthropic_api_key:
+            raise RuntimeError("LLM_BACKEND=claude but ANTHROPIC_API_KEY is not set")
+        return ChatAnthropic(model=model, api_key=settings.anthropic_api_key,
+                             max_tokens=max_tokens)
+
+    if backend == "ollama":
+        from langchain_ollama import ChatOllama
+
+        return ChatOllama(
+            model=settings.ollama_model,
+            base_url=settings.ollama_base_url,
+            num_ctx=settings.ollama_num_ctx,
+            num_predict=max_tokens,
+            # Qwen3 reasons out loud before answering unless told not to. On a laptop that is
+            # slow, and in the database branch the reasoning would land inside the "SQL" the
+            # guard is handed. Off.
+            reasoning=False,
+            # Low but not zero: SQL wants to be deterministic, prose shouldn't be robotic.
+            temperature=0.2,
+            # Keep the weights loaded between questions; reloading 5 GB costs seconds each time.
+            keep_alive="30m",
+        )
+
+    raise RuntimeError(f"LLM_BACKEND must be stub, ollama or claude — not {backend!r}")
 
 
 # --------------------------------------------------------------------------- stub
