@@ -135,11 +135,14 @@ def chat_health(_: User = Depends(current_user)) -> dict:
     """What the chatbot is actually running on, so a stub answer is never mistaken for real."""
     from app.retrieval.embedding import active_model
 
+    # On Ollama both steps run on the one local model; reporting the Claude names there would
+    # say the opposite of what this endpoint exists to say.
+    local = settings.llm_backend.lower() == "ollama"
     return {
         "llm_backend": settings.llm_backend,
         "is_stub": is_stub(),
-        "classifier_model": settings.classifier_model,
-        "branch_model": settings.branch_model,
+        "classifier_model": settings.ollama_model if local else settings.classifier_model,
+        "branch_model": settings.ollama_model if local else settings.branch_model,
         "embedding_backend": settings.embedding_backend,
         "embedding_model": active_model(),
         "similarity_floor": settings.similarity_floor,
