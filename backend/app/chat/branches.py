@@ -14,7 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 from app.chat import guard
-from app.chat.llm import chat_model, is_stub
+from app.chat.llm import chat_model, is_stub, sql_model, uses_xiyan
 from app.chat.state import Category, ChatState
 from app.chat.tools import find_company, readonly_session, run_select
 from app.config import settings
@@ -106,10 +106,11 @@ def _data_notes() -> str:
 - People type names loosely: match company names and titles with ILIKE '%...%'.
 - Select readable columns (deal.deal_no, deal.title, company.name), not id columns.
 - When a query mixes aggregates (SUM, COUNT) with other columns, GROUP BY those columns.
+- Wrap totals in COALESCE(SUM(...), 0), so "none yet" comes back as 0 rather than a blank.
 """
 
 
-def _schema_prompt() -> str:
+def _schema_text() -> str:
     """The schema, generated from the mapped metadata so it cannot drift from the real tables."""
     from sqlalchemy.dialects import postgresql
 
@@ -136,7 +137,12 @@ def _schema_prompt() -> str:
             one_of = f"  -- one of: {', '.join(repr(v) for v in values)}" if values else ""
             lines.append(f"  {column.name} {kind}{fk}{one_of}")
         lines.append("")
-    return "\n".join(lines) + "\n" + _data_notes()
+    return "\n".join(lines)
+
+
+def _schema_prompt() -> str:
+    """Schema plus the rules for reading it — what the generic SQL prompt carries."""
+    return _schema_text() + "\n" + _data_notes()
 
 
 # ------------------------------------------------------------------- TECHNICAL
@@ -193,16 +199,48 @@ def database(state: ChatState) -> ChatState:
     if is_stub():
         return _database_stub(state)
 
-    model = chat_model(settings.branch_model, max_tokens=1200)
-    prompt = (
+    writer = sql_model(max_tokens=1200)
+    prompt = _sql_prompt(_with_context(state, question), is_admin=is_admin)
+    generated = _clean_sql(writer.invoke(prompt).content)
+    # Putting rows into words is prose, which a SQL specialist isn't built for; that step
+    # stays on the general model. Without a specialist configured the two are the same model.
+    speaker = chat_model(settings.branch_model, max_tokens=600)
+    return _run_generated(state, generated, is_admin=is_admin, model=writer, prompt=prompt,
+                          phrase_model=speaker)
+
+
+# XiYan's published prompt (XGenerationLab/XiYanSQL-QwenCoder-7B-2504 model card), which is the
+# layout the model was trained on. The card's version ends with an opening ```sql fence as a
+# primer; that is left off here so a repair instruction can be appended after it, and
+# _clean_sql copes with a fenced reply either way.
+XIYAN_TEMPLATE = """你是一名{dialect}专家，现在需要阅读并理解下面的【数据库schema】描述，以及可能用到的【参考信息】，并运用{dialect}知识生成sql语句回答【用户问题】。
+【用户问题】
+{question}
+
+【数据库schema】
+{db_schema}
+
+【参考信息】
+{evidence}
+
+【用户问题】
+{question}
+"""
+
+
+def _sql_prompt(question: str, *, is_admin: bool) -> str:
+    permission = ("A change to the data is allowed if the question asks for one." if is_admin
+                  else "Only a SELECT is allowed.")
+    if uses_xiyan():
+        return XIYAN_TEMPLATE.format(
+            dialect="PostgreSQL", question=question, db_schema=_schema_text(),
+            evidence=f"{_data_notes()}\n- {permission}")
+    return (
         "Write exactly one PostgreSQL statement answering the question. Return only SQL, no "
         "prose and no markdown fence.\n"
-        + ("A change to the data is allowed if the question asks for one.\n" if is_admin
-           else "Only a SELECT is allowed.\n")
-        + f"\nSchema:\n{_schema_prompt()}\n\nQuestion: {_with_context(state, question)}"
+        + f"{permission}\n"
+        + f"\nSchema:\n{_schema_prompt()}\n\nQuestion: {question}"
     )
-    generated = _clean_sql(model.invoke(prompt).content)
-    return _run_generated(state, generated, is_admin=is_admin, model=model, prompt=prompt)
 
 
 def _clean_sql(raw: str) -> str:
@@ -212,9 +250,13 @@ def _clean_sql(raw: str) -> str:
     then — smaller ones more often. Take the fenced block if there is one, else the whole reply.
     """
     text_ = raw.strip()
-    if "```" in text_:
-        block = text_.split("```")[1]
-        text_ = block[3:] if block.lower().startswith("sql") else block
+    parts = text_.split("```")
+    if len(parts) >= 3:          # a complete fenced block: take its contents
+        text_ = parts[1]
+    elif len(parts) == 2:        # one stray fence: keep whichever side holds the statement
+        text_ = parts[0] if parts[0].strip() else parts[1]
+    if text_.lower().lstrip().startswith("sql"):
+        text_ = text_.lstrip()[3:]
     text_ = text_.strip().strip("`").strip()
     if text_.lower().startswith("sql\n") or text_.lower().startswith("sql "):
         text_ = text_[3:].strip()
@@ -231,7 +273,8 @@ COULD_NOT_QUERY = ("I couldn't build a working query for that. Try asking it ano
 
 
 def _run_generated(state: ChatState, sql: str, *, is_admin: bool, model=None,
-                   prompt: str | None = None, attempt: int = 0) -> ChatState:
+                   prompt: str | None = None, attempt: int = 0,
+                   phrase_model=None) -> ChatState:
     try:
         checked = guard.check(sql, allow_write=is_admin)
     except guard.SqlRejected as exc:
@@ -257,7 +300,8 @@ def _run_generated(state: ChatState, sql: str, *, is_admin: bool, model=None,
                 f"PostgreSQL said: {error}\n\nWrite a corrected statement. Return only SQL."
             ).content)
             return _run_generated(state, fixed, is_admin=is_admin, model=model,
-                                  prompt=prompt, attempt=attempt + 1)
+                                  prompt=prompt, attempt=attempt + 1,
+                                  phrase_model=phrase_model)
         logger.warning("generated SQL failed after %s repair(s): %s", attempt, error)
         state["answer"] = COULD_NOT_QUERY
         return state
@@ -267,14 +311,17 @@ def _run_generated(state: ChatState, sql: str, *, is_admin: bool, model=None,
         if model is None:
             state["answer"] = f"(stub) {len(result['rows'])} row(s) from: {checked.sql}"
             return state
-        state["answer"] = model.invoke(
+        # The earlier wording ("a count of zero ... say the records don't have it") turned a
+        # true "$0 received so far" into "the records don't have it". Zero is an answer; only
+        # a blank where a figure should be is missing data.
+        state["answer"] = (phrase_model or model).invoke(
             f"{WHO_WE_ARE}\n\n"
             "Answer the question in one or two sentences from these rows. State the numbers "
             "plainly. Refer to deals and companies by their names or titles, never by an "
             "internal id, and don't mention SQL. If the rows are empty, say nothing matched. "
-            "If the rows don't actually answer what was asked — a count of zero, a blank where "
-            "a figure was expected — say the records don't have it rather than reporting the "
-            "empty value as the answer."
+            "A count or total of zero is a real answer: say it plainly, for example \"$0 "
+            "received so far\". Only when a row holds a blank where a figure should be, say "
+            "the records don't have that figure."
             "\n\n"
             f"Question: {state['question']}\nSQL: {checked.sql}\nRows: {result['rows'][:50]}"
         ).content
@@ -292,7 +339,8 @@ def _run_generated(state: ChatState, sql: str, *, is_admin: bool, model=None,
                 "match it with ILIKE on a name or title column. Return only SQL."
             ).content)
             return _run_generated(state, fixed, is_admin=is_admin, model=model,
-                                  prompt=prompt, attempt=attempt + 1)
+                                  prompt=prompt, attempt=attempt + 1,
+                                  phrase_model=phrase_model)
         state["answer"] = ("That didn't match any record, so there's nothing to change. Try "
                            "naming it the way it appears in the app.")
         return state

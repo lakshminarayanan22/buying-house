@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     # Ollama. One model serves both the classifier and the branches: a second local model
     # would double the memory held, on a machine that is also running Postgres and the app.
     ollama_model: str = "qwen3:8b"
+    # Optional SQL specialist for the one step that writes queries, e.g.
+    # hf.co/mradermacher/XiYanSQL-QwenCoder-7B-2504-GGUF:Q4_K_M. Classifying and phrasing stay
+    # on ollama_model: a SQL-trained model is not built for prose. Unset = one model for all.
+    ollama_sql_model: str | None = None
     ollama_base_url: str = "http://localhost:11434"
     # Ollama's default context is a few thousand tokens and it truncates from the *front*,
     # silently — the database prompt carries the whole schema, so an overflow would cut the

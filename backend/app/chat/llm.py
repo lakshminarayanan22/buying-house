@@ -63,6 +63,33 @@ def chat_model(model: str, *, max_tokens: int = 1024):
     raise RuntimeError(f"LLM_BACKEND must be stub, ollama or claude — not {backend!r}")
 
 
+def sql_model(*, max_tokens: int = 1200):
+    """The model that writes SQL — a specialist when one is configured, else the branch model.
+
+    Only on Ollama for now: a local SQL model (XiYan) sits next to the general one. The
+    specialist gets no `reasoning` switch because it has no thinking mode to turn off, and a
+    lower temperature because a query has one right answer.
+    """
+    if settings.llm_backend.lower() == "ollama" and settings.ollama_sql_model:
+        from langchain_ollama import ChatOllama
+
+        return ChatOllama(
+            model=settings.ollama_sql_model,
+            base_url=settings.ollama_base_url,
+            num_ctx=settings.ollama_num_ctx,
+            num_predict=max_tokens,
+            temperature=0.1,
+            keep_alive="30m",
+        )
+    return chat_model(settings.branch_model, max_tokens=max_tokens)
+
+
+def uses_xiyan() -> bool:
+    """XiYan was trained on its own prompt layout; branches.py uses it when this is true."""
+    return (settings.llm_backend.lower() == "ollama"
+            and "xiyan" in (settings.ollama_sql_model or "").lower())
+
+
 # --------------------------------------------------------------------------- stub
 # Deliberately crude. Its job is to make the graph runnable, not to be a classifier — the
 # moment it looks clever, someone will trust it.

@@ -36,3 +36,24 @@ def test_an_unknown_backend_is_named_in_the_error(monkeypatch):
     monkeypatch.setattr(settings, "llm_backend", "qwen")
     with pytest.raises(RuntimeError, match="stub, ollama or claude"):
         llm.chat_model(settings.branch_model)
+
+
+XIYAN = "hf.co/mradermacher/XiYanSQL-QwenCoder-7B-2504-GGUF:Q4_K_M"
+
+
+def test_a_sql_specialist_writes_the_sql_when_configured(monkeypatch):
+    monkeypatch.setattr(settings, "llm_backend", "ollama")
+    monkeypatch.setattr(settings, "ollama_sql_model", XIYAN)
+    writer = llm.sql_model(max_tokens=1200)
+    assert writer.model == XIYAN
+    assert writer.reasoning is None          # XiYan has no thinking mode to switch off
+    assert writer.num_ctx >= 8192            # the schema prompt must still fit
+    assert llm.uses_xiyan()
+
+
+def test_without_a_specialist_the_branch_model_writes_the_sql(monkeypatch):
+    monkeypatch.setattr(settings, "llm_backend", "ollama")
+    monkeypatch.setattr(settings, "ollama_sql_model", None)
+    monkeypatch.setattr(settings, "ollama_model", "qwen3:8b")
+    assert llm.sql_model().model == "qwen3:8b"
+    assert not llm.uses_xiyan()

@@ -135,3 +135,43 @@ def test_machinery_detail_is_pointed_at_the_documents_not_the_tables():
     assert "spindle count" in CATEGORY_DEFINITIONS
     assert "only a sentence of free-text notes" in CATEGORY_DEFINITIONS or \
            "a sentence of free-text notes" in CATEGORY_DEFINITIONS
+
+
+def test_xiyan_gets_its_own_prompt_layout_with_postgres_named(monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings, "llm_backend", "ollama")
+    monkeypatch.setattr(settings, "ollama_sql_model", "hf.co/x/XiYanSQL-QwenCoder-7B-2504-GGUF:Q4_K_M")
+    prompt = branches._sql_prompt("who owes us?", is_admin=False)
+    assert "【数据库schema】" in prompt and "PostgreSQL" in prompt
+    assert "deal_party" in prompt                       # the schema
+    assert "COALESCE(SUM" in prompt                     # the rules, as evidence
+    assert "Only a SELECT is allowed." in prompt
+
+
+def test_other_models_keep_the_plain_prompt(monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings, "ollama_sql_model", None)
+    prompt = branches._sql_prompt("who owes us?", is_admin=True)
+    assert prompt.startswith("Write exactly one PostgreSQL statement")
+    assert "A change to the data is allowed" in prompt
+
+
+def test_a_reply_that_only_closes_a_fence_still_yields_its_sql():
+    # XiYan continues from an opening fence and closes it: "SELECT ...\n```"
+    assert branches._clean_sql("SELECT 1\n```") == "SELECT 1"
+    assert branches._clean_sql("```\nSELECT 2") == "SELECT 2"
+
+
+def test_rows_are_phrased_by_the_general_model_not_the_sql_specialist(monkeypatch):
+    monkeypatch.setattr(branches, "run_select", lambda sql: {"rows": [{"received": 0}]})
+    writer, speaker = FakeModel(), FakeModel("You've received $0 in commission so far.")
+    out = branches._run_generated(
+        {"question": "how much commission have we received?", "trace": []},
+        "SELECT COALESCE(SUM(commission_amount), 0) AS received FROM deal_party "
+        "WHERE commission_status = 'RECEIVED'",
+        is_admin=False, model=writer, prompt="PROMPT", phrase_model=speaker)
+
+    assert writer.prompts == []                       # the specialist wasn't asked to write prose
+    assert out["answer"] == "You've received $0 in commission so far."
+    # and the phrasing instructions now treat zero as an answer, not missing data
+    assert "A count or total of zero is a real answer" in speaker.prompts[0]
