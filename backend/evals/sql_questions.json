@@ -1,0 +1,366 @@
+{
+  "about": "Questions with known answers, checked against the database on 15 Sept 2026 (question 8 depends on today's date; the rest are fixed). 'seen' questions were used while fixing the prompts, so their score flatters the model; 'new' ones were never used for tuning and are the honest measure. Do NOT tune prompts on 'new' questions. Each `expect` is a list of groups: every group must match, and a group matches if any one of its alternatives appears in the answer (case-insensitive, commas and $ ignored). `reject` fails the answer if any phrase appears.",
+  "questions": [
+    {
+      "q": "How many companies do we have on file?",
+      "expect": [
+        [
+          "5",
+          "five"
+        ]
+      ],
+      "set": "seen"
+    },
+    {
+      "q": "Which of our companies hold GOTS certification?",
+      "expect": [
+        [
+          "erode"
+        ]
+      ],
+      "set": "seen"
+    },
+    {
+      "q": "Who should I call at Sri Vaari?",
+      "expect": [
+        [
+          "senthilkumar"
+        ]
+      ],
+      "set": "seen"
+    },
+    {
+      "q": "How much commission have we actually received so far?",
+      "expect": [
+        [
+          "0",
+          "none",
+          "nothing",
+          "no commission"
+        ]
+      ],
+      "reject": [
+        "don't have",
+        "do not have",
+        "not available"
+      ],
+      "set": "seen"
+    },
+    {
+      "q": "What's our total commission on the Kaimei deal?",
+      "expect": [
+        [
+          "11988"
+        ]
+      ],
+      "set": "seen"
+    },
+    {
+      "q": "Which companies are on the Australian cotton deal, and in what role?",
+      "expect": [
+        [
+          "darling downs"
+        ],
+        [
+          "supplier"
+        ],
+        [
+          "sri vaari"
+        ],
+        [
+          "buyer"
+        ]
+      ],
+      "set": "seen"
+    },
+    {
+      "q": "Which deal is worth the most?",
+      "expect": [
+        [
+          "australian cotton",
+          "dl-2026-0001"
+        ],
+        [
+          "444000"
+        ]
+      ],
+      "set": "seen"
+    },
+    {
+      "q": "Which follow-ups are overdue?",
+      "expect": [
+        [
+          "price confirmed"
+        ],
+        [
+          "vessel"
+        ]
+      ],
+      "set": "seen"
+    },
+    {
+      "q": "What's the minimum order at Erode?",
+      "expect": [
+        [
+          "500 kg"
+        ]
+      ],
+      "set": "seen"
+    },
+    {
+      "q": "Do any companies both buy from us and sell to us?",
+      "expect": [
+        [
+          "sri vaari"
+        ]
+      ],
+      "set": "seen"
+    },
+    {
+      "q": "How many deals are on hold?",
+      "expect": [
+        [
+          "0",
+          "no deals",
+          "none",
+          "zero"
+        ]
+      ],
+      "reject": [
+        "don't have",
+        "do not have"
+      ],
+      "set": "seen"
+    },
+    {
+      "q": "Which companies are based outside India?",
+      "expect": [
+        [
+          "darling downs"
+        ],
+        [
+          "kaimei"
+        ],
+        [
+          "northwind"
+        ]
+      ],
+      "reject": [
+        "erode",
+        "sri vaari"
+      ],
+      "set": "seen"
+    },
+    {
+      "q": "Which companies can do spinning?",
+      "expect": [
+        [
+          "sri vaari"
+        ]
+      ],
+      "reject": [
+        "erode",
+        "darling"
+      ],
+      "set": "new"
+    },
+    {
+      "q": "Who are Erode Processors' brand clients?",
+      "expect": [
+        [
+          "decathlon"
+        ],
+        [
+          "marks"
+        ]
+      ],
+      "set": "new"
+    },
+    {
+      "q": "What products does Northwind Apparel make?",
+      "expect": [
+        [
+          "polo"
+        ],
+        [
+          "t-shirt",
+          "tshirt",
+          "t shirt"
+        ]
+      ],
+      "set": "new"
+    },
+    {
+      "q": "Which companies hold OEKO-TEX Standard 100?",
+      "expect": [
+        [
+          "erode"
+        ],
+        [
+          "sri vaari"
+        ]
+      ],
+      "reject": [
+        "darling",
+        "northwind"
+      ],
+      "set": "new"
+    },
+    {
+      "q": "What are Sri Vaari's payment terms?",
+      "expect": [
+        [
+          "30 days"
+        ]
+      ],
+      "set": "new"
+    },
+    {
+      "q": "What is Erode Processors' lead time?",
+      "expect": [
+        [
+          "21 days"
+        ]
+      ],
+      "set": "new"
+    },
+    {
+      "q": "What's the email address for our contact at Kaimei?",
+      "expect": [
+        [
+          "tanaka@kaimei.example"
+        ]
+      ],
+      "set": "new"
+    },
+    {
+      "q": "Which deals are currently in negotiation?",
+      "expect": [
+        [
+          "kaimei",
+          "dl-2026-0002"
+        ]
+      ],
+      "reject": [
+        "australian"
+      ],
+      "set": "new"
+    },
+    {
+      "q": "What is Darling Downs' commission rate on the cotton deal?",
+      "expect": [
+        [
+          "1.5"
+        ]
+      ],
+      "set": "new"
+    },
+    {
+      "q": "When was Darling Downs invoiced for their commission?",
+      "expect": [
+        [
+          "30"
+        ],
+        [
+          "aug",
+          "-08-"
+        ]
+      ],
+      "set": "new"
+    },
+    {
+      "q": "What is the total value of all our open deals?",
+      "expect": [
+        [
+          "544800"
+        ]
+      ],
+      "set": "new"
+    },
+    {
+      "q": "How much commission is due but not yet invoiced?",
+      "expect": [
+        [
+          "2088"
+        ]
+      ],
+      "set": "new"
+    },
+    {
+      "q": "Which follow-ups on the Australian cotton deal are still open?",
+      "expect": [
+        [
+          "documents to mill"
+        ],
+        [
+          "commission received"
+        ],
+        [
+          "vessel"
+        ]
+      ],
+      "reject": [
+        "contract signed",
+        "container booked",
+        "bales"
+      ],
+      "set": "new"
+    },
+    {
+      "q": "What is the next follow-up due on the Kaimei deal after 15 September 2026?",
+      "expect": [
+        [
+          "chemistry",
+          "osaka"
+        ]
+      ],
+      "set": "new"
+    },
+    {
+      "q": "Which deal ships in November 2026?",
+      "expect": [
+        [
+          "kaimei",
+          "dl-2026-0002"
+        ]
+      ],
+      "reject": [
+        "australian"
+      ],
+      "set": "new"
+    },
+    {
+      "q": "How many metric tonnes of cotton is Sri Vaari buying?",
+      "expect": [
+        [
+          "240"
+        ]
+      ],
+      "set": "new"
+    },
+    {
+      "q": "What processes does Darling Downs do?",
+      "expect": [
+        [
+          "growing"
+        ],
+        [
+          "ginning"
+        ]
+      ],
+      "set": "new"
+    },
+    {
+      "q": "Which companies on the Kaimei deal are based in India?",
+      "expect": [
+        [
+          "erode"
+        ]
+      ],
+      "reject": [
+        "northwind"
+      ],
+      "set": "new"
+    }
+  ]
+}
