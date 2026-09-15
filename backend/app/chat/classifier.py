@@ -16,19 +16,26 @@ DATABASE — answerable from the records: deals, commissions owed, ship dates, m
   companies, their processes, products, certifications, contacts and minimum orders.
   Examples: "how much commission is outstanding?", "which deals ship this month?",
   "who can do fabric dyeing and holds GOTS?", "what MOQ does Erode have?"
+  The records hold capacity and machinery only as a sentence of free-text notes. Every actual
+  number — machine makes and models, spindle counts, throughput — is in an uploaded document.
 
 TECHNICAL — answerable from the text of uploaded documents: specifications, methods,
-  procedures, application instructions, and the detail inside a factory brochure.
+  procedures, application instructions, machine and equipment lists, and the detail inside a
+  factory brochure or a machinery sheet.
   Examples: "what temperature is the Kaimei finish applied at?",
-  "what micronaire is the Australian cotton?", "how many spindles does Sri Vaari run?"
+  "what micronaire is the Australian cotton?", "how many spindles does Sri Vaari run?",
+  "what machinery does that mill have?", "which autoconers are they running?"
 
 CREATIVE — open-ended, compositional or generative. Drafting, summarising, proposing,
   structuring. PROVISIONAL: this category is under-specified until real examples exist.
   Examples: "draft an introduction to a new spinner", "summarise where the cotton deal stands"
 
 Tie-break: if the question can be answered exactly from the tables, it is DATABASE, even when
-it sounds conversational. Prefer a secondary category over forcing a single label when the
-question genuinely has two parts."""
+it sounds conversational. But a question asking for a specific technical figure — a machine
+make or model, a spindle count, a temperature, a yarn count, a throughput — is TECHNICAL even
+though the tables carry a summary note on the same subject, because only the document has the
+figure. Prefer a secondary category over forcing a single label when the question genuinely has
+two parts."""
 
 
 def classify(state: ChatState) -> ChatState:

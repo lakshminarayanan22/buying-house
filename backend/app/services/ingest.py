@@ -101,6 +101,9 @@ def ingest_document(db: Session, document_id: uuid.UUID) -> dict:
         company.city if company else None,
         deal_no=deal.deal_no if deal else None,
         deal_title=deal.title if deal else None,
+        # Stored as a plain string column, so it comes back as str, not the enum, depending on
+        # whether the row was just written or loaded from the database.
+        kind=getattr(doc.kind, "value", doc.kind),
     )
 
     pieces = split_text(text)

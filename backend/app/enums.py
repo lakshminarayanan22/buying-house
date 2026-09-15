@@ -115,6 +115,7 @@ class DocumentKind(StrEnum):
     """Deliberately coarse. A folder per deal is what was asked for, not a filing taxonomy."""
 
     BROCHURE = "BROCHURE"                # the factory profile PDF
+    MACHINERY = "MACHINERY"              # machine list / equipment spec sheet
     PURCHASE_ORDER = "PURCHASE_ORDER"
     INVOICE = "INVOICE"
     PACKING_LIST = "PACKING_LIST"

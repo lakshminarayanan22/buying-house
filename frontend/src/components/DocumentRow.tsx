@@ -2,12 +2,40 @@
 
 import * as React from "react";
 
-import { Button } from "@/components/ui";
+import { Badge, Button } from "@/components/ui";
 import { ApiError, api } from "@/lib/api";
 import { titleCase } from "@/lib/format";
-import type { DocRow } from "@/lib/types";
+import type { DocRow, ExtractionStatus } from "@/lib/types";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+
+/**
+ * Whether the assistant can read this file, and why not when it can't.
+ *
+ * A file that reads fine says nothing — a badge on every row would be noise. Only the
+ * cases that need a human: still working, or never going to work. A scanned brochure is
+ * the one that matters; without this it looks filed and simply never answers a question.
+ */
+const READABILITY: Partial<Record<ExtractionStatus, { tone: string; live?: boolean; label: string; why: string }>> = {
+  PENDING: {
+    tone: "amber", live: true, label: "Indexing…",
+    why: "Being read so the assistant can answer questions from it.",
+  },
+  NEEDS_OCR: {
+    tone: "amber", label: "Scan — not searchable",
+    why: "This PDF is images of pages with no text in it, so the assistant can't read it. " +
+         "Upload a PDF exported from the original file, or run OCR over this one first.",
+  },
+  FAILED: {
+    tone: "rose", label: "Couldn't be read",
+    why: "Something went wrong reading this file, so the assistant can't use it.",
+  },
+  SKIPPED: {
+    tone: "slate", label: "Not searchable",
+    why: "This kind of file has no text to read — it's filed here, but the assistant can't " +
+         "answer questions from it.",
+  },
+};
 
 /**
  * One filed document: open it, or remove it.
@@ -26,6 +54,7 @@ export function DocumentRow({
   onError: (message: string) => void;
 }) {
   const [busy, setBusy] = React.useState(false);
+  const readability = READABILITY[doc.extraction_status];
 
   async function remove() {
     const confirmed = window.confirm(
@@ -54,9 +83,18 @@ export function DocumentRow({
         >
           {doc.title}
         </a>
-        <div className="text-[11px]" style={{ color: "var(--text-subtle)" }}>
-          {titleCase(doc.kind)}
-          {doc.size_bytes ? ` · ${Math.max(1, Math.round(doc.size_bytes / 1024))} KB` : ""}
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px]"
+             style={{ color: "var(--text-subtle)" }}>
+          <span>
+            {titleCase(doc.kind)}
+            {doc.size_bytes ? ` · ${Math.max(1, Math.round(doc.size_bytes / 1024))} KB` : ""}
+          </span>
+          {readability ? (
+            <Badge tone={readability.tone} lamp live={readability.live}
+                   title={doc.extraction_error || readability.why}>
+              {readability.label}
+            </Badge>
+          ) : null}
         </div>
       </div>
       <Button

@@ -124,3 +124,14 @@ def test_a_change_that_matches_nothing_is_retried_then_refused_not_offered(monke
 def test_the_prompts_say_who_we_are():
     assert "buying house" in branches.WHO_WE_ARE
     assert "don't manufacture" in branches.WHO_WE_ARE
+
+
+def test_machinery_detail_is_pointed_at_the_documents_not_the_tables():
+    """Live runs routed "what machinery does X run" to the tables, which hold only a note, and
+    it answered "0 spindles" from an empty result while the machine list sat in a PDF."""
+    from app.chat.classifier import CATEGORY_DEFINITIONS
+
+    assert "machine and equipment lists" in CATEGORY_DEFINITIONS
+    assert "spindle count" in CATEGORY_DEFINITIONS
+    assert "only a sentence of free-text notes" in CATEGORY_DEFINITIONS or \
+           "a sentence of free-text notes" in CATEGORY_DEFINITIONS

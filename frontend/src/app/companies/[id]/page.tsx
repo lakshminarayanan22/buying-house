@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { ApiError, api, uploadFile } from "@/lib/api";
-import { useAsync } from "@/lib/hooks";
+import { useAsync, useReloadWhileIndexing } from "@/lib/hooks";
 import { useRequireSession } from "@/lib/session";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { DocumentRow } from "@/components/DocumentRow";
@@ -20,6 +20,9 @@ export default function CompanyPage() {
   const deals = useAsync(() => api.get<DealRow[]>("/deals", { company_id: id }), [id]);
   const files = useAsync(() => api.get<DocRow[]>("/documents", { company_id: id }), [id]);
   const [banner, setBanner] = React.useState<string | null>(null);
+  // A freshly uploaded PDF is read after the upload responds, so keep looking until it is
+  // either searchable or known not to be. Above the early returns: hooks run every render.
+  useReloadWhileIndexing((files.data ?? []).map((d) => d.extraction_status), files.reload);
 
   if (loading || !user) return null;
   if (company.error) return <AppShell><Alert>{company.error}</Alert></AppShell>;
@@ -61,7 +64,10 @@ export default function CompanyPage() {
           </Card>
 
           <Card>
-            <CardHeader title="Capacity, machinery and terms" />
+            <CardHeader
+              title="Capacity, machinery and terms"
+              subtitle="Notes below; the machine list itself goes in as a PDF"
+            />
             <dl className="grid gap-4 p-5 sm:grid-cols-2">
               {[
                 ["Capacity", c.capacity_notes],
@@ -81,6 +87,7 @@ export default function CompanyPage() {
               ))}
             </dl>
             <EditNotes company={c} onSaved={reload} onError={setBanner} />
+            <MachineryBrochure companyId={id} onSaved={reload} onError={setBanner} />
           </Card>
 
           <Card>
@@ -344,6 +351,50 @@ function EditNotes({
   );
 }
 
+/**
+ * The machine list, as a PDF, filed from the machinery card rather than the general Files card.
+ *
+ * "What machines does this mill run" is a question the records can't answer — machinery is a
+ * paragraph of notes, and the real detail lives in the supplier's own spec sheet. Uploading it
+ * here files it as MACHINERY and puts its text in front of the assistant, so the question is
+ * answered from the sheet, with a citation, rather than from the summary.
+ */
+function MachineryBrochure({
+  companyId, onSaved, onError,
+}: { companyId: string; onSaved: () => void; onError: (m: string) => void }) {
+  const [busy, setBusy] = React.useState(false);
+
+  return (
+    <div className="space-y-1.5 border-t px-5 py-3" style={{ borderColor: "var(--border)" }}>
+      <FileUpload
+        label="Upload machinery brochure (PDF)"
+        accept=".pdf,application/pdf"
+        busy={busy}
+        onFile={async (file) => {
+          setBusy(true);
+          try {
+            const form = new FormData();
+            form.append("file", file);
+            form.append("kind", "MACHINERY");
+            form.append("company_id", companyId);
+            await uploadFile(form);
+            onSaved();
+          } catch (err) {
+            onError(err instanceof ApiError ? err.message : "Upload failed.");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+      <p className="text-[11px] leading-relaxed" style={{ color: "var(--text-subtle)" }}>
+        It appears under Files. Once indexed you can ask &ldquo;what machines does this mill
+        run?&rdquo; and get the answer from the sheet. A scanned PDF has no text to read — the
+        file list says so if that happens.
+      </p>
+    </div>
+  );
+}
+
 function UploadFile({
   companyId, onSaved, onError,
 }: { companyId: string; onSaved: () => void; onError: (m: string) => void }) {
@@ -354,7 +405,7 @@ function UploadFile({
     <div className="space-y-2 border-t px-4 py-3" style={{ borderColor: "var(--border)" }}>
       <Field label="Filing it as">
         <Select value={kind} onChange={(e) => setKind(e.target.value)}>
-          {["BROCHURE", "CERTIFICATE", "CONTRACT", "PHOTO", "OTHER"].map((k) => (
+          {["BROCHURE", "MACHINERY", "CERTIFICATE", "CONTRACT", "PHOTO", "OTHER"].map((k) => (
             <option key={k} value={k}>{titleCase(k)}</option>
           ))}
         </Select>

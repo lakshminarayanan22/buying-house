@@ -271,7 +271,10 @@ def _run_generated(state: ChatState, sql: str, *, is_admin: bool, model=None,
             f"{WHO_WE_ARE}\n\n"
             "Answer the question in one or two sentences from these rows. State the numbers "
             "plainly. Refer to deals and companies by their names or titles, never by an "
-            "internal id, and don't mention SQL. If the rows are empty, say nothing matched."
+            "internal id, and don't mention SQL. If the rows are empty, say nothing matched. "
+            "If the rows don't actually answer what was asked — a count of zero, a blank where "
+            "a figure was expected — say the records don't have it rather than reporting the "
+            "empty value as the answer."
             "\n\n"
             f"Question: {state['question']}\nSQL: {checked.sql}\nRows: {result['rows'][:50]}"
         ).content

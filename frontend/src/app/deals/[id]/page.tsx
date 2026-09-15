@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { ApiError, api, uploadFile } from "@/lib/api";
-import { useAsync } from "@/lib/hooks";
+import { useAsync, useReloadWhileIndexing } from "@/lib/hooks";
 import { useRequireSession } from "@/lib/session";
 import { AppShell, PageHeader, RoleBadge } from "@/components/AppShell";
 import { DocumentRow } from "@/components/DocumentRow";
@@ -51,6 +51,8 @@ export default function DealPage() {
   const companies = useAsync(() => api.get<CompanyRow[]>("/companies"), []);
   const processes = useAsync(() => api.get<Ref[]>("/taxonomy", { domain: "PROCESS" }), []);
   const [banner, setBanner] = React.useState<string | null>(null);
+  useReloadWhileIndexing(
+    (deal.data?.documents ?? []).map((d) => d.extraction_status), deal.reload);
 
   if (loading || !user) return null;
   if (deal.error) return <AppShell><Alert>{deal.error}</Alert></AppShell>;

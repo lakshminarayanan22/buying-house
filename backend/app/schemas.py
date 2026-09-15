@@ -13,6 +13,7 @@ from app.enums import (
     DealRole,
     DealStatus,
     DocumentKind,
+    ExtractionStatus,
     MilestoneStatus,
     UserRole,
     UserStatus,
@@ -300,6 +301,11 @@ class DocOut(ORM):
     original_filename: str | None
     size_bytes: int | None
     created_at: datetime
+    # Whether the chatbot can actually read it. A scanned brochure extracts no text and is
+    # silently unsearchable otherwise — the one failure someone uploading a machine list
+    # needs to see.
+    extraction_status: ExtractionStatus = ExtractionStatus.PENDING
+    extraction_error: str | None = None
 
 
 DealDetail.model_rebuild()

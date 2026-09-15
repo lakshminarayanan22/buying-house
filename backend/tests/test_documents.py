@@ -125,3 +125,24 @@ def test_signed_out_visitors_cannot_delete(env):
     doc = env.upload(b"private", "private.txt").json()
     assert env.client.delete(f"/api/documents/{doc['id']}").status_code == 401
     assert len(env.folder()) == 1
+
+
+def test_the_folder_says_whether_a_file_is_searchable(env):
+    """The API has to carry extraction status, or a scanned brochure looks identical to a
+    working one and nobody finds out it answers nothing."""
+    env.upload(b"a purchase order", "po.txt")
+    row = env.folder()[0]
+    assert "extraction_status" in row and "extraction_error" in row
+
+
+def test_the_document_kind_is_part_of_what_gets_embedded():
+    """A machine list often contains only model numbers and counts. Putting the kind in the
+    prefix gives "what machinery does X run" something to match on."""
+    from app.retrieval.chunking import context_prefix
+
+    prefix = context_prefix("Ring frame list", "Sri Vaari Spinning Mills", "Coimbatore",
+                            kind="MACHINERY")
+    assert "Type: Machinery" in prefix
+    assert "Sri Vaari Spinning Mills" in prefix
+    # Nothing to say for a document with no kind — the line is simply absent.
+    assert "Type:" not in context_prefix("Some file", "Acme")

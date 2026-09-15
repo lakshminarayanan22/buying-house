@@ -137,6 +137,8 @@ export interface Milestone {
   is_overdue: boolean;
 }
 
+export type ExtractionStatus = "PENDING" | "OK" | "NEEDS_OCR" | "FAILED" | "SKIPPED";
+
 export interface DocRow {
   id: string;
   kind: string;
@@ -144,6 +146,8 @@ export interface DocRow {
   original_filename: string | null;
   size_bytes: number | null;
   created_at: string;
+  extraction_status: ExtractionStatus;
+  extraction_error: string | null;
 }
 
 export interface DealRow {

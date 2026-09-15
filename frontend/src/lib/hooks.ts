@@ -78,3 +78,30 @@ export function useDebounced<T>(value: T, delay = 300): T {
 
   return debounced;
 }
+
+
+/**
+ * Keep refreshing while a document is still being read.
+ *
+ * Text extraction and embedding happen after the upload responds, so a file lands as
+ * "Indexing…" and becomes searchable a moment later — longer when the embedding service is
+ * rate-limited. Without this the badge sits on "Indexing…" until someone reloads the page,
+ * and an unreadable scan looks the same as a working upload.
+ */
+export function useReloadWhileIndexing(
+  statuses: Array<string | undefined>,
+  reload: () => void,
+) {
+  const waiting = statuses.some((s) => s === "PENDING");
+  React.useEffect(() => {
+    if (!waiting) return;
+    const timer = window.setInterval(reload, 4000);
+    // Give up after two minutes rather than polling a stuck document forever.
+    const stop = window.setTimeout(() => window.clearInterval(timer), 120_000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(stop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waiting]);
+}

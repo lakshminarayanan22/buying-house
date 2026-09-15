@@ -70,7 +70,7 @@ def _split_recursive(text: str, size: int, separators: list[str]) -> list[str]:
 
 def context_prefix(document_title: str, company_name: str | None = None,
                    company_city: str | None = None, *, deal_no: str | None = None,
-                   deal_title: str | None = None) -> str:
+                   deal_title: str | None = None, kind: str | None = None) -> str:
     """The line prepended before embedding — the highest-leverage part of ingestion.
 
     "Minimum order quantity 500 kg, lead time 12 days" is nearly identical across every brochure
@@ -79,6 +79,10 @@ def context_prefix(document_title: str, company_name: str | None = None,
     the user sees is — because it is derivable and would otherwise be shown in citations.
     """
     parts = [f"Document: {document_title}"]
+    # What kind of document it is, so "what machines does Sri Vaari run" has the word
+    # "machinery" to match even when the sheet itself only lists model numbers.
+    if kind:
+        parts.append(f"Type: {kind.replace('_', ' ').title()}")
     where = ", ".join(p for p in [company_name, company_city] if p)
     if where:
         parts.append(f"Company: {where}")
