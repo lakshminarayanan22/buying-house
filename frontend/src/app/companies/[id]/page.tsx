@@ -8,6 +8,7 @@ import { ApiError, api, uploadFile } from "@/lib/api";
 import { useAsync } from "@/lib/hooks";
 import { useRequireSession } from "@/lib/session";
 import { AppShell, PageHeader } from "@/components/AppShell";
+import { DocumentRow } from "@/components/DocumentRow";
 import { Alert, Badge, Button, Card, CardHeader, EmptyState, Field, FileUpload, Input, Select, StatusBadge, Table, Td, Textarea, Th } from "@/components/ui";
 import { formatDate, money, titleCase } from "@/lib/format";
 import type { CompanyDetail, DealRow, DocRow, Ref } from "@/lib/types";
@@ -146,18 +147,8 @@ export default function CompanyPage() {
             ) : (
               <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
                 {files.data?.map((doc) => (
-                  <li key={doc.id} className="px-4 py-2.5">
-                    <a
-                      href={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api"}/documents/${doc.id}/download`}
-                      className="text-sm hover:underline"
-                      style={{ color: "var(--accent)" }}
-                    >
-                      {doc.title}
-                    </a>
-                    <div className="text-[11px]" style={{ color: "var(--text-subtle)" }}>
-                      {titleCase(doc.kind)}
-                    </div>
-                  </li>
+                  <DocumentRow key={doc.id} doc={doc} onDeleted={() => files.reload()}
+                               onError={setBanner} />
                 ))}
               </ul>
             )}

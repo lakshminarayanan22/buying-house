@@ -21,7 +21,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.auth.deps import current_user
@@ -145,15 +145,38 @@ def download(document_id: uuid.UUID, _: User = Depends(current_user),
 
 
 @router.delete("/{document_id}", response_model=Msg)
-def delete_document(document_id: uuid.UUID, _: User = Depends(current_user),
+def delete_document(document_id: uuid.UUID, user: User = Depends(current_user),
                     db: Session = Depends(get_db)) -> Msg:
+    """Remove a filed document — the fix for uploading the wrong one.
+
+    Deletes the row (its chunks go with it, so the chatbot stops quoting the file immediately),
+    then the file itself. That order matters: a row pointing at a missing file is a broken
+    download, while a file left behind with no row is invisible and harmless.
+    """
     doc = db.get(Document, document_id)
     if doc is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Not found")
 
-    path = (_root() / doc.storage_key).resolve()
-    if str(path).startswith(str(_root().resolve())) and path.exists():
-        path.unlink()
-    db.delete(doc)
+    title, storage_key = doc.title, doc.storage_key
+    deal_id, company_id = doc.deal_id, doc.company_id
+
+    # Deleted as a statement, not through the ORM: db.delete() would load every chunk of the
+    # document into memory to cascade over them, and a long PDF has hundreds. The database's
+    # own ON DELETE CASCADE removes them, so the chatbot stops quoting the file at once.
+    db.execute(delete(Document).where(Document.id == document_id))
+    # The deletion outlives the file: "where did that invoice go" is answerable afterwards.
+    db.add(ActivityLog(entity_type="Document", entity_id=document_id, deal_id=deal_id,
+                       company_id=company_id, actor_user_id=user.id, actor_label=user.name,
+                       action=ActivityAction.DELETE, summary=f"Deleted {title}"))
     db.commit()
+
+    # Stored names are a hash of the contents, so the same file uploaded twice into one folder
+    # is two rows sharing one file on disk. Remove it only once nothing else points at it.
+    still_used = db.scalar(
+        select(Document.id).where(Document.storage_key == storage_key).limit(1))
+    if not still_used:
+        root = _root().resolve()
+        path = (root / storage_key).resolve()
+        if str(path).startswith(str(root)) and path.is_file():
+            path.unlink()
     return Msg(detail="Deleted")

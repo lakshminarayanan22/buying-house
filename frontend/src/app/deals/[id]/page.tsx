@@ -8,6 +8,7 @@ import { ApiError, api, uploadFile } from "@/lib/api";
 import { useAsync } from "@/lib/hooks";
 import { useRequireSession } from "@/lib/session";
 import { AppShell, PageHeader, RoleBadge } from "@/components/AppShell";
+import { DocumentRow } from "@/components/DocumentRow";
 import { Alert, Button, Card, CardHeader, EmptyState, Field, FileUpload, Input, Select, StatusBadge, Table, Td, Th } from "@/components/ui";
 import { formatDate, money, titleCase } from "@/lib/format";
 import type { CompanyRow, DealDetail, Ref } from "@/lib/types";
@@ -251,20 +252,8 @@ export default function DealPage() {
             ) : (
               <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
                 {d.documents.map((doc) => (
-                  <li key={doc.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                    <div className="min-w-0">
-                      <a
-                        href={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api"}/documents/${doc.id}/download`}
-                        className="truncate text-sm hover:underline"
-                        style={{ color: "var(--accent)" }}
-                      >
-                        {doc.title}
-                      </a>
-                      <div className="text-[11px]" style={{ color: "var(--text-subtle)" }}>
-                        {titleCase(doc.kind)} · {doc.size_bytes ? `${Math.round(doc.size_bytes / 1024)} KB` : ""}
-                      </div>
-                    </div>
-                  </li>
+                  <DocumentRow key={doc.id} doc={doc} onDeleted={() => deal.reload()}
+                               onError={setBanner} />
                 ))}
               </ul>
             )}
