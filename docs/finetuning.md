@@ -18,10 +18,14 @@ There are two models worth training, in this order:
 The prompt now has a fourth category and a decline path. Measure before spending anything:
 
 ```bash
-cd backend
-ollama serve &                                   # the local model, for the baseline only
-python -m scripts.eval_classify --set new        # the half never used for tuning
+cd ~/buying-house/backend
+ollama serve &                                          # the local model, for the baseline only
+.venv/bin/python -m scripts.eval_classify --set new     # the half never used for tuning
 ```
+
+Use `.venv/bin/python`, not `python`. The backend's dependencies live in that virtualenv and
+there is no `python` on the PATH of a fresh shell — `python3` would run the system interpreter,
+which has none of them.
 
 You get a confusion matrix, per-class recall and precision, every misroute with the model's own
 reasoning, and a count of **real questions turned away** — the expensive mistake.
@@ -38,8 +42,8 @@ or you want the router on a 1.7B model so it answers in a fraction of a second i
 ## The data
 
 ```bash
-cd backend
-python -m scripts.build_classifier_dataset          # ~880 examples
+cd ~/buying-house/backend
+.venv/bin/python -m scripts.build_classifier_dataset    # ~880 examples
 ```
 
 Writes `evals/training/classifier_train.jsonl` and `classifier_valid.jsonl`, from two sources:
@@ -58,7 +62,7 @@ into a measure of memory.
 Read a sample before uploading — bad labels train faster than good ones:
 
 ```bash
-head -5 evals/training/classifier_train.jsonl | python -m json.tool
+head -5 evals/training/classifier_train.jsonl | .venv/bin/python -m json.tool
 ```
 
 ---
@@ -79,6 +83,9 @@ head -5 evals/training/classifier_train.jsonl | python -m json.tool
 ---
 
 ## Training
+
+The `modal` command comes from the system Python you installed it with, so it works from any
+directory — but the paths below are relative to the repo root.
 
 ```bash
 cd ~/buying-house                # run from the repo root, not backend/
@@ -129,9 +136,9 @@ In production the same model runs in the Ollama container on Modal, beside XiYan
 ## Keep it only if it wins
 
 ```bash
-cd backend
-python -m scripts.eval_classify --set new                # trained router
-python -m scripts.eval_classify --set new --model qwen3:8b   # the baseline it must beat
+cd ~/buying-house/backend
+.venv/bin/python -m scripts.eval_classify --set new                  # trained router
+.venv/bin/python -m scripts.eval_classify --set new --model qwen3:8b # the baseline to beat
 ```
 
 Compare the confusion matrices, not just the accuracy. A model that gains two points overall
@@ -153,5 +160,5 @@ Same Modal setup, a bigger job.
 - **Hardware:** an A10G, 2–3 epochs, 1–2 hours, roughly **$2–4**.
 - **The rule:** the 18 `new` questions in `evals/sql_questions.json` never enter training, just
   as the `new` routing questions never do here.
-- **Scoring:** `python -m scripts.eval_sql` against the baseline of 18/30 overall and 10/18 on
-  the unseen half.
+- **Scoring:** `.venv/bin/python -m scripts.eval_sql` against the baseline of 18/30 overall and
+  10/18 on the unseen half.
