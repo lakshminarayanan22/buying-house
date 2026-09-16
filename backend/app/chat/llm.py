@@ -24,7 +24,7 @@ def is_stub() -> bool:
 
 
 # --------------------------------------------------------------------------- real
-def chat_model(model: str, *, max_tokens: int = 1024):
+def chat_model(model: str, *, max_tokens: int = 1024, temperature: float | None = None):
     """The model for one step of the graph.
 
     Callers name the Claude model they would want (a fast one to classify, a stronger one to
@@ -33,6 +33,7 @@ def chat_model(model: str, *, max_tokens: int = 1024):
     .env rather than a change to the graph.
     """
     backend = settings.llm_backend.lower()
+    temperature = settings.llm_temperature if temperature is None else temperature
 
     if backend == "claude":
         from langchain_anthropic import ChatAnthropic
@@ -40,7 +41,7 @@ def chat_model(model: str, *, max_tokens: int = 1024):
         if not settings.anthropic_api_key:
             raise RuntimeError("LLM_BACKEND=claude but ANTHROPIC_API_KEY is not set")
         return ChatAnthropic(model=model, api_key=settings.anthropic_api_key,
-                             max_tokens=max_tokens)
+                             max_tokens=max_tokens, temperature=temperature)
 
     if backend == "ollama":
         from langchain_ollama import ChatOllama
@@ -55,7 +56,7 @@ def chat_model(model: str, *, max_tokens: int = 1024):
             # guard is handed. Off.
             reasoning=False,
             # Low but not zero: SQL wants to be deterministic, prose shouldn't be robotic.
-            temperature=0.2,
+            temperature=temperature,
             # Keep the weights loaded between questions; reloading 5 GB costs seconds each time.
             keep_alive="30m",
         )
@@ -78,10 +79,11 @@ def sql_model(*, max_tokens: int = 1200):
             base_url=settings.ollama_base_url,
             num_ctx=settings.ollama_num_ctx,
             num_predict=max_tokens,
-            temperature=0.1,
+            temperature=settings.sql_temperature,
             keep_alive="30m",
         )
-    return chat_model(settings.branch_model, max_tokens=max_tokens)
+    return chat_model(settings.branch_model, max_tokens=max_tokens,
+                      temperature=settings.sql_temperature)
 
 
 def uses_xiyan() -> bool:

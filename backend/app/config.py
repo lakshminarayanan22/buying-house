@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     # silently — the database prompt carries the whole schema, so an overflow would cut the
     # schema off and leave the model inventing columns. 16K holds schema + question + rows.
     ollama_num_ctx: int = 16384
+    # How much the model is allowed to wander. Prose wants a little room; a query has one right
+    # answer and should not be creative about column names. Applied on every backend, so a
+    # comparison between Qwen and Claude is not also a comparison of two different temperatures.
+    llm_temperature: float = 0.2
+    sql_temperature: float = 0.1
     classifier_confidence_floor: float = 0.6
     allow_secondary_category: bool = True
     sql_statement_timeout_ms: int = 2000
