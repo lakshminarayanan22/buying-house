@@ -200,7 +200,7 @@ export interface Dashboard {
   pipeline: Array<{ status: DealStatus; deals: number; value: number; commission: number }>;
 }
 
-export type ChatCategory = "DATABASE" | "TECHNICAL" | "CREATIVE";
+export type ChatCategory = "DATABASE" | "TECHNICAL" | "CREATIVE" | "OUT_OF_SCOPE";
 
 export interface PendingWrite {
   sql: string;

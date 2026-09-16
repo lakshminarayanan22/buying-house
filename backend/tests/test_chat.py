@@ -113,6 +113,56 @@ def test_low_confidence_asks_instead_of_guessing():
     assert route(state) == "clarify"
 
 
+def test_out_of_scope_question_is_declined_without_a_branch():
+    from app.chat.state import QueryClassification
+
+    state: ChatState = {"classification": QueryClassification(
+        primary=Category.OUT_OF_SCOPE, confidence=0.95, reasoning="general knowledge")}
+    assert route(state) == "decline"
+
+
+def test_an_unsure_out_of_scope_question_is_asked_about_rather_than_refused():
+    """The asymmetry that matters: refusing a real question is worse than asking about a silly
+    one, so anything under decline_confidence goes to clarify instead."""
+    from app.chat.classifier import UNSURE_MESSAGE, classify
+    from app.chat.state import QueryClassification
+    import app.chat.classifier as classifier_module
+
+    def fake_model(*_args, **_kwargs):
+        class _M:
+            def with_structured_output(self, _schema):
+                return self
+
+            def invoke(self, _prompt):
+                return QueryClassification(
+                    primary=Category.OUT_OF_SCOPE, confidence=0.65, reasoning="borderline")
+        return _M()
+
+    original = classifier_module.chat_model
+    original_stub = classifier_module.is_stub
+    classifier_module.chat_model = fake_model
+    classifier_module.is_stub = lambda: False
+    try:
+        state = classify({"question": "what is the price of cotton?"})
+    finally:
+        classifier_module.chat_model = original
+        classifier_module.is_stub = original_stub
+
+    assert state["needs_clarification"] == UNSURE_MESSAGE
+    assert route(state) == "clarify"
+
+
+def test_the_stub_router_does_not_guess_when_nothing_matches():
+    """The stub only knows the keywords it was given, so it catches an out-of-scope question
+    when none of them appear. "Who is the prime minister of India?" still routes to DATABASE,
+    because "who" is a records word — which is exactly why the stub is not a classifier and the
+    real routing is measured separately in evals/classification_questions.json."""
+    result = stub_classify("Tell me the weather in Chennai tomorrow")
+    assert result.primary == Category.OUT_OF_SCOPE
+    # Low enough that the graph asks rather than refuses.
+    assert result.confidence < 0.7
+
+
 # --------------------------------------------------------------------- tools
 @pytest.fixture()
 def companies(db):

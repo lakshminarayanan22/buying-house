@@ -189,6 +189,13 @@ function Working() {
   );
 }
 
+/** titleCase would render OUT_OF_SCOPE as "Out Of Scope", which reads like a fourth skill the
+    app has rather than the edge of what it knows. */
+function categoryLabel(category: string): string {
+  return category === "OUT_OF_SCOPE" ? "Outside scope" : titleCase(category);
+}
+
+
 function TurnBlock({ turn }: { turn: Turn }) {
   const r = turn.response;
   return (
@@ -231,8 +238,8 @@ function Answer({ turn, response }: { turn: Turn; response: AskResponse }) {
         <span className="micro">Needs clarification</span>
       ) : response.category ? (
         <span className="micro">
-          {titleCase(response.category)}
-          {response.secondary ? ` · ${titleCase(response.secondary)}` : ""}
+          {categoryLabel(response.category)}
+          {response.secondary ? ` · ${categoryLabel(response.secondary)}` : ""}
         </span>
       ) : null}
 

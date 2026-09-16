@@ -11,7 +11,7 @@ import uuid
 from langgraph.graph import END, StateGraph
 
 from app.chat import branches
-from app.chat.classifier import classify, route
+from app.chat.classifier import DECLINE_MESSAGE, classify, route
 from app.chat.llm import is_stub
 from app.chat.state import Category, ChatState
 from app.config import settings
@@ -27,6 +27,18 @@ _NODES = {
 
 def _clarify(state: ChatState) -> ChatState:
     state["answer"] = state["needs_clarification"]
+    return state
+
+
+def _decline(state: ChatState) -> ChatState:
+    """Say no, and spend nothing doing it.
+
+    No model call, no retrieval, no query: a question about the prime minister of India should
+    cost the same as a typo. It also skips the secondary node, because there is no second half
+    of an out-of-scope question worth answering.
+    """
+    state["answer"] = DECLINE_MESSAGE
+    state.setdefault("trace", []).append("declined: out of scope")
     return state
 
 
@@ -62,6 +74,7 @@ def build_graph():
     graph = StateGraph(ChatState)
     graph.add_node("classify", classify)
     graph.add_node("clarify", _clarify)
+    graph.add_node("decline", _decline)
     for name, fn in _NODES.items():
         graph.add_node(name, fn)
     graph.add_node("secondary", _secondary)
@@ -69,6 +82,7 @@ def build_graph():
     graph.set_entry_point("classify")
     graph.add_conditional_edges("classify", route, {
         "clarify": "clarify",
+        "decline": "decline",
         Category.DATABASE.value: Category.DATABASE.value,
         Category.TECHNICAL.value: Category.TECHNICAL.value,
         Category.CREATIVE.value: Category.CREATIVE.value,
@@ -77,6 +91,7 @@ def build_graph():
         graph.add_edge(name, "secondary")
     graph.add_edge("secondary", END)
     graph.add_edge("clarify", END)
+    graph.add_edge("decline", END)
     return graph.compile()
 
 

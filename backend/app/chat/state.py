@@ -12,6 +12,9 @@ class Category(StrEnum):
     DATABASE = "DATABASE"
     TECHNICAL = "TECHNICAL"
     CREATIVE = "CREATIVE"
+    # Not a fourth thing the app can do — the absence of the other three. Having a name for it
+    # is what lets the graph decline instead of guessing which branch is least wrong.
+    OUT_OF_SCOPE = "OUT_OF_SCOPE"
 
 
 class QueryClassification(BaseModel):

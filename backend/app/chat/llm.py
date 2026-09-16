@@ -120,9 +120,11 @@ def stub_classify(question: str) -> QueryClassification:
     second, second_score = ranked[1]
 
     if top_score == 0:
+        # Nothing matched. Low confidence on purpose: the graph turns this into a question
+        # rather than a refusal, because the stub is a keyword matcher, not a judge.
         return QueryClassification(
-            primary=Category.TECHNICAL, confidence=0.3,
-            reasoning="stub: no keywords matched, defaulting to document search",
+            primary=Category.OUT_OF_SCOPE, confidence=0.3,
+            reasoning="stub: no keywords matched",
         )
     total = sum(scores.values()) or 1
     return QueryClassification(

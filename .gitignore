@@ -10,3 +10,8 @@ build/
 *.egg-info/
 .pytest_cache/
 .DS_Store
+
+# Generated training data and downloaded adapters. Both are reproducible — the JSONL from
+# scripts/build_classifier_dataset.py, the adapter from a Modal run — and neither is small.
+backend/evals/training/
+artifacts/

@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.2
     sql_temperature: float = 0.1
     classifier_confidence_floor: float = 0.6
+    # Deliberately above the floor. Refusing a real question reads as a broken assistant, while
+    # asking "did you mean the records or the documents?" about a silly one costs nothing — so a
+    # decline needs more certainty than a branch does. Between the two values we ask.
+    decline_confidence: float = 0.7
     allow_secondary_category: bool = True
     sql_statement_timeout_ms: int = 2000
     sql_row_cap: int = 500
