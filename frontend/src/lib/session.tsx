@@ -12,6 +12,7 @@ import * as React from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 import { api, getToken, logout as apiLogout } from "./api";
+import { clearStoredConversation } from "./conversation";
 import type { Me } from "./types";
 
 interface SessionState {
@@ -54,6 +55,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const signOut = React.useCallback(async () => {
     await apiLogout();
     setUser(null);
+    // The Ask thread holds deal values and commissions. It goes with the session, not with the
+    // browser — the next person to sign in on this machine must not find it waiting.
+    clearStoredConversation();
     router.push("/login");
   }, [router]);
 

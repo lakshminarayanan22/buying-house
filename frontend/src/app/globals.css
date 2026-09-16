@@ -1,120 +1,117 @@
 @import "tailwindcss";
 
 /* =============================================================================
-   FLIGHT DECK
+   BONE & SLATE
    -----------------------------------------------------------------------------
-   Graphite structure, slate-blue instrumentation.
+   Warm paper ground, one technical blue, colour spent only on state.
 
-   The brief was "a spaceship for textiles", and what makes a real cockpit look
-   like a cockpit is not decoration — it is that nearly every surface is dark,
-   inert neutral, and the only things that glow are the ones telling you a number
-   or a state. That happens to be the rule this app was already built on: the
-   colour budget is spent on status, never on chrome. So the theme leans into
-   that rule rather than layering an aesthetic on top of it.
+   The palette comes from Ecolink's print material: a warm bone sheet, warm
+   near-black ink, and a muted blue that belongs to no fibre and no product, so
+   it can mean "the system is telling you something" without meaning cotton or
+   X-Mint. The rule the app was built on is unchanged — the colour budget is
+   spent on status, never on chrome — but the ground it is spent against is now
+   paper rather than graphite.
 
-   Three ideas carry it:
+   Three things carry it:
 
-     1. Graphite ground, slate-blue light. Neutrals are cool and near-black; the
-        accent is the only chromatic thing on screen, so it reads as backlight
-        rather than as paint.
-     2. A HUD grid under everything, at roughly four percent — below conscious
-        notice, but it stops the background being a flat void and gives the
-        panels something to sit on.
-     3. Anything reporting a value gets instrument treatment: tabular figures,
-        tracked uppercase micro-labels, and a lamp wherever there is a state to
-        read.
+     1. Bone ground, paper panels. Neutrals are warm; the blue is the only
+        chromatic thing that is not reporting a state.
+     2. Rules, not shadows. Separation is a 1px line. Shadow is reserved for the
+        two things that genuinely float: the Ask dock and a menu.
+     3. Anything reporting a value keeps instrument treatment: tabular figures,
+        tracked uppercase micro-labels, a lamp wherever there is a state.
 
-   Restraint is the whole trick. A loud spaceship is a costume.
+   Two values from the brand sheet do not survive a contrast check and are split
+   rather than used blind: the muted grey #8C857A (3.2:1 on bone) and the blue
+   #5A86AE (3.3:1). Each keeps its job on fills and edges, and a darker step
+   takes over wherever the colour has to be read as text.
    ============================================================================= */
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* Instrument Sans names things, Plex Sans says them, Plex Mono reports them.
+     All three are self-hosted by next/font — see app/layout.tsx. */
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-instrument-sans), var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 :root {
-  /* Daylight panel. Same instrument, lit from outside. */
-  --bg: #eaeef3;
-  --surface: #ffffff;
-  --surface-2: #f5f8fb;
-  --border: #dbe1e9;
-  --border-strong: #bfc8d4;
-  --text: #0d1219;
-  --text-muted: #515d6c;
-  --text-subtle: #7a8695;
-  --accent: #2f4f7f;
-  --accent-hover: #24406a;
-  --accent-fg: #ffffff;
-  --accent-soft: #e5edf8;
-  --accent-line: rgba(47, 79, 127, 0.28);
-  --glow: rgba(47, 79, 127, 0.20);
-  --grid: rgba(47, 79, 127, 0.055);
-  --wash: rgba(47, 79, 127, 0.055);
-  --danger: #b3261e;
-  --danger-soft: #fdeceb;
-  --success: #1c6b45;
-  --success-soft: #e6f3ec;
-  --warning: #855400;
-  --warning-soft: #fdf2df;
+  /* Daylight. The sheet itself. */
+  --bg: #f4eee5;
+  --surface: #fbf8f3;
+  --surface-2: #efe7da;
+  --border: #e1d7c8;
+  --border-strong: #cdbfaa;
+  --text: #26221e;
+  --text-muted: #6f675c;
+  /* Deliberately the same value as --text-muted: micro-labels are 10px, and a
+     third, lighter grey could not be read at that size. Hierarchy below muted
+     is made with size and weight, not with more grey. */
+  --text-subtle: #6f675c;
+  --accent: #3d6a93;
+  --accent-hover: #2f5679;
+  --accent-fg: #fbf8f3;
+  --accent-soft: #e7edf4;
+  --accent-line: rgba(90, 134, 174, 0.42);
+  --glow: rgba(90, 134, 174, 0.16);
+  --danger: #a33a2e;
+  --danger-soft: #f7e7e3;
+  --success: #2f6b4f;
+  --success-soft: #e6f0e9;
+  --warning: #85591a;
+  --warning-soft: #f6ebd9;
 }
 
-/* Dark is the native state of this interface; light is the exception. The two
-   blocks below carry identical tokens on purpose — one follows the OS, the other
-   an explicit choice from the header toggle. The :not([data-appearance="light"])
-   guard is what lets that toggle override the OS in both directions. */
+/* The warm counterpart, not a graphite one: the same sheet under a lamp. The
+   two blocks below carry identical tokens on purpose — one follows the OS, the
+   other an explicit choice from the header toggle. The
+   :not([data-appearance="light"]) guard is what lets that toggle override the
+   OS in both directions. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-appearance="light"]) {
-    /* Cockpit at night. Graphite structure, slate-blue instruments, light only
-       where something is being read. */
-    --bg: #0a0c10;
-    --surface: #12151b;
-    --surface-2: #171b23;
-    --border: #222833;
-    --border-strong: #333b49;
-    --text: #e6ebf2;
-    --text-muted: #96a2b3;
-    --text-subtle: #697585;
-    --accent: #7fa8d8;
-    --accent-hover: #9dc0e8;
-    --accent-fg: #080a0d;
-    --accent-soft: #16202e;
-    --accent-line: rgba(127, 168, 216, 0.34);
-    --glow: rgba(127, 168, 216, 0.30);
-    --grid: rgba(127, 168, 216, 0.045);
-    --wash: rgba(127, 168, 216, 0.07);
-    --danger: #f0837a;
-    --danger-soft: #2a1615;
-    --success: #5ec08d;
-    --success-soft: #10241a;
-    --warning: #e0ac54;
+    --bg: #1a1714;
+    --surface: #221e1a;
+    --surface-2: #2a251f;
+    --border: #342e27;
+    --border-strong: #453d33;
+    --text: #ede6da;
+    --text-muted: #a79d91;
+    --text-subtle: #a79d91;
+    --accent: #7fa6cc;
+    --accent-hover: #9dbedd;
+    --accent-fg: #15120f;
+    --accent-soft: #1e2833;
+    --accent-line: rgba(127, 166, 204, 0.38);
+    --glow: rgba(127, 166, 204, 0.22);
+    --danger: #e08b7f;
+    --danger-soft: #2a1715;
+    --success: #6fbe92;
+    --success-soft: #14241b;
+    --warning: #d2a45c;
     --warning-soft: #241c10;
   }
 }
 
 :root[data-appearance="dark"] {
-  /* Cockpit at night. Graphite structure, slate-blue instruments, light only
-     where something is being read. */
-  --bg: #0a0c10;
-  --surface: #12151b;
-  --surface-2: #171b23;
-  --border: #222833;
-  --border-strong: #333b49;
-  --text: #e6ebf2;
-  --text-muted: #96a2b3;
-  --text-subtle: #697585;
-  --accent: #7fa8d8;
-  --accent-hover: #9dc0e8;
-  --accent-fg: #080a0d;
-  --accent-soft: #16202e;
-  --accent-line: rgba(127, 168, 216, 0.34);
-  --glow: rgba(127, 168, 216, 0.30);
-  --grid: rgba(127, 168, 216, 0.045);
-  --wash: rgba(127, 168, 216, 0.07);
-  --danger: #f0837a;
-  --danger-soft: #2a1615;
-  --success: #5ec08d;
-  --success-soft: #10241a;
-  --warning: #e0ac54;
+  --bg: #1a1714;
+  --surface: #221e1a;
+  --surface-2: #2a251f;
+  --border: #342e27;
+  --border-strong: #453d33;
+  --text: #ede6da;
+  --text-muted: #a79d91;
+  --text-subtle: #a79d91;
+  --accent: #7fa6cc;
+  --accent-hover: #9dbedd;
+  --accent-fg: #15120f;
+  --accent-soft: #1e2833;
+  --accent-line: rgba(127, 166, 204, 0.38);
+  --glow: rgba(127, 166, 204, 0.22);
+  --danger: #e08b7f;
+  --danger-soft: #2a1715;
+  --success: #6fbe92;
+  --success-soft: #14241b;
+  --warning: #d2a45c;
   --warning-soft: #241c10;
 }
 
@@ -123,24 +120,17 @@ html {
 }
 
 body {
+  background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
 
-  /* The HUD: a soft wash bleeding down from the top edge, over a fine grid.
-     Fixed, so the grid belongs to the vehicle rather than to the document —
-     panels slide over it as you scroll. Painted as background layers instead of
-     a pseudo-element so nothing can end up stacked above the content. */
-  background-color: var(--bg);
-  background-image:
-    radial-gradient(115% 55% at 50% -12%, var(--wash), transparent 60%),
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size:
-    100% 100%,
-    34px 34px,
-    34px 34px;
-  background-attachment: fixed;
+/* Names of things — page titles, deal and company names, buttons, tabs. Set
+   tight, because a name is read as a shape rather than word by word. */
+.display {
+  font-family: var(--font-display);
+  letter-spacing: -0.014em;
 }
 
 /* Numeric columns line up only if the digits are tabular — value, commission and
@@ -160,11 +150,18 @@ body {
 /* Tracked uppercase micro-label — column heads, field captions, panel titles.
    Anything that names a value instead of being one. */
 .micro {
-  font-size: 10px;
+  font-family: var(--font-display);
+  font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-subtle);
+}
+
+/* Answer prose. Long text needs a measure; without one an answer runs the full
+   width of the dock and the eye loses the line. */
+.prose-measure {
+  max-width: 66ch;
 }
 
 ::selection {
@@ -179,29 +176,28 @@ button {
   font: inherit;
 }
 
-/* Focus reads as a control lighting up: a hard ring for accessibility, with a soft
-   halo behind it so the control looks powered rather than merely outlined. */
+/* A ring, and only a ring. The halo that used to sit behind it was decoration
+   on a dark ground and reads as a smudge on paper. */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 4px;
-  box-shadow: 0 0 0 6px var(--glow);
+  border-radius: 3px;
 }
 
-/* The lamp pulse, used only for states that are actively running — something in
-   flight, never something parked. Suppressed for anyone who asked for less motion. */
+/* The one moving thing in the interface: the step a question is currently on.
+   Never used for something parked. */
 @keyframes lamp-pulse {
   0%,
   100% {
     opacity: 1;
   }
   50% {
-    opacity: 0.4;
+    opacity: 0.35;
   }
 }
 
 .lamp-live {
-  animation: lamp-pulse 2.4s ease-in-out infinite;
+  animation: lamp-pulse 1.6s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
