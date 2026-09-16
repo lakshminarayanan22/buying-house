@@ -7,7 +7,7 @@ import { ApiError, api } from "@/lib/api";
 import { useAsync } from "@/lib/hooks";
 import { useConversation, type Turn, type WriteState } from "@/lib/conversation";
 import { Alert, Badge, Button, Lamp, Textarea } from "@/components/ui";
-import { formatCell } from "@/lib/format";
+import { formatCell, titleCase } from "@/lib/format";
 import type { AskResponse, ChatHealth } from "@/lib/types";
 
 /**
@@ -224,7 +224,17 @@ function Answer({ turn, response }: { turn: Turn; response: AskResponse }) {
   const rows = response.rows ?? [];
   return (
     <div className="flex flex-col gap-3">
-      {response.needs_clarification ? <span className="micro">Needs clarification</span> : null}
+      {/* What the question was taken as. The routing decides which branch answers, so seeing it
+          is how you tell a misrouted question from a wrongly answered one. The confidence
+          percentage stays out — it never changed what anyone did about the answer. */}
+      {response.needs_clarification ? (
+        <span className="micro">Needs clarification</span>
+      ) : response.category ? (
+        <span className="micro">
+          {titleCase(response.category)}
+          {response.secondary ? ` · ${titleCase(response.secondary)}` : ""}
+        </span>
+      ) : null}
 
       <p className="prose-measure text-sm leading-relaxed whitespace-pre-wrap">
         <WithCitations text={response.answer} citations={response.citations} />
