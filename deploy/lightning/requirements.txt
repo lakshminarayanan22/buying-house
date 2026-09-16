@@ -1,0 +1,8 @@
+# Pinned on purpose. An unpinned training environment is an experiment you cannot repeat: the
+# score moves and you cannot tell whether your data or a library upgrade did it.
+torch==2.6.0
+transformers==4.51.3
+datasets==3.5.0
+peft==0.15.1
+trl==0.16.1
+accelerate==1.6.0

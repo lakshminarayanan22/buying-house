@@ -1,8 +1,14 @@
 # Fine-tuning the Ask box
 
-Training runs **on Modal only**. Nothing here trains on the laptop: the Mac builds a JSONL file,
-uploads it, and later downloads an adapter of a few megabytes. The GPU work happens remotely and
-stops when the job ends.
+Training runs **on a rented GPU, never on the laptop**. The Mac builds a JSONL file, uploads it,
+and later downloads one file.
+
+**Where:** a **Lightning AI Studio**. Modal was the first choice and its script is still in
+`deploy/modal/`, but Modal refuses GPU functions until a card is on file — "Please add a payment
+method to use L4 GPU functions" — so it is unusable without one. Lightning's free tier gives a
+studio plus around 15 credits a month (roughly 20+ T4 hours) with **no card**, and this job needs
+well under an hour. The training script is plain Python, so it also runs unchanged on Colab or
+Kaggle if the free hours run out.
 
 There are two models worth training, in this order:
 
@@ -67,69 +73,72 @@ head -5 evals/training/classifier_train.jsonl | .venv/bin/python -m json.tool
 
 ---
 
-## Modal setup, once
+## Training on Lightning
 
-1. **Account and CLI** — sign up at modal.com (Starter includes **$30/month of free compute**),
-   then on the Mac:
-   ```bash
-   pip install modal
-   modal setup                    # opens a browser, writes a token to ~/.modal.toml
-   ```
-2. **Spending guard** — set a budget alert in the Modal dashboard. Nothing here should approach
-   the free credit, and an alert catches a job left running.
-3. Nothing else. The volume (`ecolink-training`) is created on first use, and the base weights
-   download themselves inside Modal.
+**Once:** sign up at lightning.ai (no card), and create a Studio. It starts on a free CPU
+machine; you switch to a GPU only while training, from the machine selector at the top right.
+Watch the credit meter — a T4 is about 1 credit an hour and this job needs well under one.
 
----
+**Upload four files** into the Studio by dragging them onto its file browser:
 
-## Training
+- `backend/evals/training/classifier_train.jsonl`
+- `backend/evals/training/classifier_valid.jsonl`
+- `deploy/lightning/train_classifier.py`
+- `deploy/lightning/requirements.txt`
 
-The `modal` command comes from the system Python you installed it with, so it works from any
-directory — but the paths below are relative to the repo root.
+**Then, in the Studio's terminal** — switch the machine to a **T4** first:
 
 ```bash
-cd ~/buying-house                # run from the repo root, not backend/
-
-modal run deploy/modal/train_classifier.py::upload_data
-modal run deploy/modal/train_classifier.py::run_training          # ~15 min on an L4
+pip install -r requirements.txt
+python train_classifier.py          # ~20-30 min on a T4
 ```
 
-`run_training` trains and then prints the trained router's answers to six probe questions,
-including ones it never saw. Loss curves don't tell you whether it routes; those answers do.
+It prints the validation loss per epoch and then asks the trained router six probe questions,
+including ones no training row contains. Loss curves don't tell you whether it routes; those
+answers do.
 
-What it does: LoRA (r=16) on **Qwen3-1.7B**, 3 epochs, bf16, on one L4. Loss is computed on the
-answer only — the system prompt is the category definitions repeated on every row, and training
-on it would teach the model to recite the prompt.
+What it does: LoRA (r=16) on **Qwen3-1.7B**, 3 epochs, half precision, gradient checkpointing so
+it fits a 16 GB card. Loss is computed on the answer only — the system prompt is the category
+definitions repeated on every row, and training on it would teach the model to recite the prompt.
+The script asks the card whether it supports bf16 rather than assuming, because T4s do not.
 
-Roughly **$0.20 per run** ($0.80/hr for the L4), well inside the free credit. To try again with
-different settings, use a new run name so the first adapter survives:
+To try different settings, keep the first adapter by naming the output:
 
 ```bash
-modal run deploy/modal/train_classifier.py::run_training --epochs 4 --run v2
+python train_classifier.py --epochs 4 --lr 5e-5 --out adapters/router-v2
 ```
+
+**Turn the GPU machine back off when the run finishes.** An idle studio on a GPU spends credits
+for nothing.
 
 ---
 
 ## Getting it back and using it
 
+Do the conversion in the Studio, not on the Mac: it turns a 3.4 GB download into a 1.1 GB one,
+and avoids building llama.cpp on macOS. Upload `deploy/lightning/export_gguf.sh` alongside the
+rest, then:
+
 ```bash
-modal run deploy/modal/train_classifier.py::download --run v1     # → artifacts/router/v1/
+bash export_gguf.sh adapters/router-v1      # merge → GGUF → quantise to Q4_K_M
 ```
 
-To serve it, the adapter is fused into the base weights, converted to GGUF with llama.cpp, and
-registered with Ollama:
+Download the resulting `ecolink-router-q4_k_m.gguf`, put it beside `deploy/lightning/Modelfile`
+on the Mac, and register it:
 
 ```bash
 ollama create ecolink-router -f Modelfile
 ```
 
-Then point the app at it — **no code change**, because the model is already an env var:
+Then point the app at it — **no code change**, because the model is already a setting:
 
 ```
 CLASSIFIER_MODEL=ecolink-router
 ```
 
-In production the same model runs in the Ollama container on Modal, beside XiYanSQL.
+Note for later: the deployment plan plans to serve XiYanSQL from Ollama **on Modal**, which hits
+the same card requirement. That decision needs revisiting when it is time to deploy — it does not
+block anything here.
 
 ---
 
@@ -137,8 +146,8 @@ In production the same model runs in the Ollama container on Modal, beside XiYan
 
 ```bash
 cd ~/buying-house/backend
-.venv/bin/python -m scripts.eval_classify --set new                  # trained router
-.venv/bin/python -m scripts.eval_classify --set new --model qwen3:8b # the baseline to beat
+.venv/bin/python -m scripts.eval_classify --set new --model ecolink-router  # the trained router
+.venv/bin/python -m scripts.eval_classify --set new --model qwen3:8b       # the baseline to beat
 ```
 
 Compare the confusion matrices, not just the accuracy. A model that gains two points overall
@@ -157,7 +166,9 @@ Same Modal setup, a bigger job.
   **execute every one against the dev database and keep only those that run and return the
   expected answer**. An LLM writing SQL that looks right is not evidence; the database is.
   Target 300–800 verified pairs.
-- **Hardware:** an A10G, 2–3 epochs, 1–2 hours, roughly **$2–4**.
+- **Hardware:** a 7B LoRA needs more than a T4 — an L4 or A10G, 2–3 epochs, 1–2 hours. On
+  Lightning's free credits that is most of a month's allowance, so this is the one to think about
+  before starting.
 - **The rule:** the 18 `new` questions in `evals/sql_questions.json` never enter training, just
   as the `new` routing questions never do here.
 - **Scoring:** `.venv/bin/python -m scripts.eval_sql` against the baseline of 18/30 overall and

@@ -1,0 +1,10 @@
+# Registers the fine-tuned router with Ollama:
+#   ollama create ecolink-router -f Modelfile
+# Then point the app at it — no code change, the model is already a setting:
+#   CLASSIFIER_MODEL=ecolink-router
+FROM ./ecolink-router-q4_k_m.gguf
+
+# The router is asked for one JSON object. Sampling is not wanted here — the same question should
+# route the same way every time — and app/config.py sets the same value for the general model.
+PARAMETER temperature 0.1
+PARAMETER num_ctx 4096
