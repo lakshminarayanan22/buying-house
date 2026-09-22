@@ -1,0 +1,1012 @@
+{
+ "about": "Questions for the SQL writer, asked against the ecolink_eval database (scripts/seed_eval_db.py) — never the real one. 'Today' in that database is fixed at 15 September 2026, so time-sensitive questions name their dates instead of saying 'overdue' or 'this month', and a correct query returns the same rows next year. XiYanSQL drafts a query for every question; a person corrects each draft by checking the rows it returns, and only corrected drafts are trained on or scored against. set='score' marks the 40 questions held out for measuring models: never train on them, and for the fairest comparison correct them without leaning on the draft. Writes (kind='write') are asked with admin permission and must satisfy app/chat/guard.py: one statement, only business tables, and UPDATE/DELETE always with a WHERE. INSERTs must supply id = gen_random_uuid() — no table defaults its id — while created_at/updated_at fill themselves. A deal's value is the BUYER leg's value, never the sum of every leg; when a commission rate changes, the commission amount changes with it.",
+ "database": "ecolink_eval",
+ "today": "2026-09-15",
+ "questions": [
+  {
+   "q": "Which companies are based in Tiruppur?",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S001"
+  },
+  {
+   "q": "List the companies whose status is still LEAD.",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T002"
+  },
+  {
+   "q": "Which companies were established before 2000?",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T003"
+  },
+  {
+   "q": "Which deals are currently on hold?",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S004"
+  },
+  {
+   "q": "Which deals are due to ship between 1 October and 30 November 2026?",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S005"
+  },
+  {
+   "q": "Which contacts have no email address on file?",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T006"
+  },
+  {
+   "q": "Which companies both buy from us and sell to us?",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T007"
+  },
+  {
+   "q": "Which deals did we lose, and what was the reason each time?",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S008"
+  },
+  {
+   "q": "Which companies have payment terms that involve a letter of credit (LC)?",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T009"
+  },
+  {
+   "q": "Which deals have no target ship date?",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T010"
+  },
+  {
+   "q": "Which milestones are marked as blocked?",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T011"
+  },
+  {
+   "q": "How many deals are in negotiation right now?",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S012"
+  },
+  {
+   "q": "Which deals were closed during 2025?",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T013"
+  },
+  {
+   "q": "Which companies are blacklisted or inactive?",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S014"
+  },
+  {
+   "q": "List the deals that were created in August 2026.",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T015"
+  },
+  {
+   "q": "Which companies have a note mentioning a flood?",
+   "clauses": [
+    "select",
+    "where"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T016"
+  },
+  {
+   "q": "Who is the primary contact at Dhaka Knit Composite, and what is their email?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S017"
+  },
+  {
+   "q": "Which companies hold GOTS certification?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S018"
+  },
+  {
+   "q": "Which companies in India hold OEKO-TEX Standard 100?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T019"
+  },
+  {
+   "q": "Which companies can do fabric dyeing, and what is each one's minimum order?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S020"
+  },
+  {
+   "q": "Who is the buyer on DL-2026-0024?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T021"
+  },
+  {
+   "q": "List every company on DL-2026-0006 together with its role.",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S022"
+  },
+  {
+   "q": "Which deals is Coimbatore Compact Spinning the buyer on?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T023"
+  },
+  {
+   "q": "Which deals is Ludhiana Spinners involved in, in any role?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S024"
+  },
+  {
+   "q": "Which of Priya Iyer's deals are still open?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T025"
+  },
+  {
+   "q": "What is the value of DL-2026-0015?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S026"
+  },
+  {
+   "q": "Which deals have Hanse Mode GmbH as the buyer, and when does each ship?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T027"
+  },
+  {
+   "q": "Which companies based in Bangladesh are on open deals?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S028"
+  },
+  {
+   "q": "Which deals are priced in euros?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T029"
+  },
+  {
+   "q": "Which milestones on DL-2026-0011 are not done yet?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T030"
+  },
+  {
+   "q": "Which milestones were planned before 15 September 2026 and are still not done, and which deal is each on?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S031"
+  },
+  {
+   "q": "Which companies owe us commission that is due or invoiced, and how much on each leg?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S032"
+  },
+  {
+   "q": "Which deals use the FOB incoterm?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T033"
+  },
+  {
+   "q": "Which of Kavya Knitwear's clients are past clients rather than current ones?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T034"
+  },
+  {
+   "q": "Which companies make polo shirts?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T035"
+  },
+  {
+   "q": "Which deals have a testing lab on them?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T036"
+  },
+  {
+   "q": "Which companies have we used as processors?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T037"
+  },
+  {
+   "q": "List the contacts who work at companies based in Japan.",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T038"
+  },
+  {
+   "q": "Which open deals involve a company that is not active?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S039"
+  },
+  {
+   "q": "Which deals involving Chittagong Denim Ltd are due to ship before 1 October 2026?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T040"
+  },
+  {
+   "q": "What products does Dhaka Knit Composite make?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T041"
+  },
+  {
+   "q": "What is the commission basis and percentage on each leg of DL-2026-0006?",
+   "clauses": [
+    "select",
+    "join"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T042"
+  },
+  {
+   "q": "How many deals does each owner have?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T043"
+  },
+  {
+   "q": "Which companies are on more than 5 deals?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S044"
+  },
+  {
+   "q": "What is the total commission received from each company, highest first?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T045"
+  },
+  {
+   "q": "Which buyers have more than 2 open deals?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S046"
+  },
+  {
+   "q": "What is the total value of open deals in each currency?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S047"
+  },
+  {
+   "q": "Which currencies have more than 500,000 of open deal value?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T048"
+  },
+  {
+   "q": "How many deals are there in each status?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T049"
+  },
+  {
+   "q": "Which companies owe us more than 5,000 in commission in total?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S050"
+  },
+  {
+   "q": "Which companies hold more than two certifications?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T051"
+  },
+  {
+   "q": "What is the average commission percentage on percentage-based legs, by role?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T052"
+  },
+  {
+   "q": "Which deals have more than two parties on them?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S053"
+  },
+  {
+   "q": "Which cities have more than one company?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T054"
+  },
+  {
+   "q": "What is the total buyer value of deals in each status?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T055"
+  },
+  {
+   "q": "Which owners have more than 10 milestones that were planned before 15 September 2026 and are not done?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S056"
+  },
+  {
+   "q": "Which deals have more than five milestones, and how many does each have?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T057"
+  },
+  {
+   "q": "Which processes are offered by more than two companies?",
+   "clauses": [
+    "select",
+    "group by",
+    "having"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S058"
+  },
+  {
+   "q": "Which companies have never been on a deal?",
+   "clauses": [
+    "select",
+    "subquery"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S059"
+  },
+  {
+   "q": "Which is our biggest deal by value?",
+   "clauses": [
+    "select",
+    "subquery"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T060"
+  },
+  {
+   "q": "Which three companies have paid us the most commission?",
+   "clauses": [
+    "select",
+    "subquery"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S061"
+  },
+  {
+   "q": "Which deals have no milestone marked as done?",
+   "clauses": [
+    "select",
+    "subquery"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T062"
+  },
+  {
+   "q": "Which certified companies are not on any open deal?",
+   "clauses": [
+    "select",
+    "subquery"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T063"
+  },
+  {
+   "q": "Which buyers have never had a completed deal?",
+   "clauses": [
+    "select",
+    "subquery"
+   ],
+   "set": "score",
+   "kind": "read",
+   "id": "S064"
+  },
+  {
+   "q": "Which deal has the most milestones?",
+   "clauses": [
+    "select",
+    "subquery"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T065"
+  },
+  {
+   "q": "Which supplier legs earn us more commission than the average supplier leg?",
+   "clauses": [
+    "select",
+    "subquery"
+   ],
+   "set": "train",
+   "kind": "read",
+   "id": "T066"
+  },
+  {
+   "q": "Mark DL-2026-0037 as agreed.",
+   "clauses": [
+    "update",
+    "where"
+   ],
+   "set": "score",
+   "kind": "write",
+   "id": "S067"
+  },
+  {
+   "q": "Move the target ship date of DL-2026-0020 to 20 October 2026.",
+   "clauses": [
+    "update",
+    "where"
+   ],
+   "set": "score",
+   "kind": "write",
+   "id": "S068"
+  },
+  {
+   "q": "The commission on Coimbatore Compact Spinning's leg of DL-2026-0017 was invoiced on 16 September 2026 — record it.",
+   "clauses": [
+    "update",
+    "where"
+   ],
+   "set": "score",
+   "kind": "write",
+   "id": "S069"
+  },
+  {
+   "q": "Mark the 'Order confirmed' milestone on DL-2026-0011 as done, completed on 1 April 2026.",
+   "clauses": [
+    "update",
+    "where"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T070"
+  },
+  {
+   "q": "Put DL-2026-0026 on hold.",
+   "clauses": [
+    "update",
+    "where"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T071"
+  },
+  {
+   "q": "Change Pieter de Vries's email to pieter.devries@amstelbasics.example.",
+   "clauses": [
+    "update",
+    "where"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T072"
+  },
+  {
+   "q": "Make Karthik Selvan a primary contact at Kavya Knitwear.",
+   "clauses": [
+    "update",
+    "where"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T073"
+  },
+  {
+   "q": "Set Pacific Outdoor Co's status to active.",
+   "clauses": [
+    "update",
+    "where"
+   ],
+   "set": "score",
+   "kind": "write",
+   "id": "S074"
+  },
+  {
+   "q": "Change Orient Fabric Processors' lead time for fabric dyeing to 18 days.",
+   "clauses": [
+    "update",
+    "where"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T075"
+  },
+  {
+   "q": "We received the commission on Coimbatore Compact Spinning's leg of DL-2026-0013 on 18 September 2026 — record it.",
+   "clauses": [
+    "update",
+    "where"
+   ],
+   "set": "score",
+   "kind": "write",
+   "id": "S076"
+  },
+  {
+   "q": "Change the commission rate on Ludhiana Spinners' leg of DL-2026-0019 to 2%, and update the commission amount to match.",
+   "clauses": [
+    "update",
+    "where"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T077"
+  },
+  {
+   "q": "Mark every milestone on DL-2026-0014 as blocked.",
+   "clauses": [
+    "update",
+    "where"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T078"
+  },
+  {
+   "q": "Mark DL-2026-0040 as lost, with the reason 'Buyer chose a Vietnamese mill'.",
+   "clauses": [
+    "update",
+    "where"
+   ],
+   "set": "score",
+   "kind": "write",
+   "id": "S079"
+  },
+  {
+   "q": "Update Sri Balaji Knits' payment terms to '45 days'.",
+   "clauses": [
+    "update",
+    "where"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T080"
+  },
+  {
+   "q": "Add a contact at Chittagong Denim Ltd: Arif Chowdhury, production manager, arif@ctgdenim.example.",
+   "clauses": [
+    "insert"
+   ],
+   "set": "score",
+   "kind": "write",
+   "id": "S081"
+  },
+  {
+   "q": "Record that Saigon Garment Co now holds GOTS certification, reference GOTS-VN-3310.",
+   "clauses": [
+    "insert"
+   ],
+   "set": "score",
+   "kind": "write",
+   "id": "S082"
+  },
+  {
+   "q": "Add Zara as a current client of Orient Fabric Processors.",
+   "clauses": [
+    "insert"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T083"
+  },
+  {
+   "q": "Add a milestone 'Lab test report received' to DL-2026-0015, planned for 1 November 2026.",
+   "clauses": [
+    "insert"
+   ],
+   "set": "score",
+   "kind": "write",
+   "id": "S084"
+  },
+  {
+   "q": "Add knitting to Chittagong Denim Ltd's processes, with a minimum order of 1,000 kg and a lead time of 20 days.",
+   "clauses": [
+    "insert"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T085"
+  },
+  {
+   "q": "Record that Sakura Lifestyle KK buys T-shirts as well.",
+   "clauses": [
+    "insert"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T086"
+  },
+  {
+   "q": "Add Chennai Testing Labs to DL-2026-0015 as a testing party (role OTHER) for a flat 1,500, with no commission.",
+   "clauses": [
+    "insert"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T087"
+  },
+  {
+   "q": "Add a contact for Gulf Uniforms LLC: Fatima Al Mansoori, finance, fatima@gulfuniforms.example.",
+   "clauses": [
+    "insert"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T088"
+  },
+  {
+   "q": "Add OEKO-TEX Standard 100 to Panipat Recycled Fibres' certifications.",
+   "clauses": [
+    "insert"
+   ],
+   "set": "score",
+   "kind": "write",
+   "id": "S089"
+  },
+  {
+   "q": "Add a 'Final inspection' milestone to DL-2026-0034, planned for 20 October 2026.",
+   "clauses": [
+    "insert"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T090"
+  },
+  {
+   "q": "Add Primark as a past client of Dhaka Knit Composite.",
+   "clauses": [
+    "insert"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T091"
+  },
+  {
+   "q": "Remove Surat Weaving Works' ISO 9001 certification.",
+   "clauses": [
+    "delete",
+    "where"
+   ],
+   "set": "score",
+   "kind": "write",
+   "id": "S092"
+  },
+  {
+   "q": "Delete the contact Meenakshi R at Coimbatore Compact Spinning.",
+   "clauses": [
+    "delete",
+    "where"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T093"
+  },
+  {
+   "q": "Remove Chennai Testing Labs from DL-2026-0038.",
+   "clauses": [
+    "delete",
+    "where"
+   ],
+   "set": "score",
+   "kind": "write",
+   "id": "S094"
+  },
+  {
+   "q": "Delete the 'Commission received' milestone on DL-2026-0008.",
+   "clauses": [
+    "delete",
+    "where"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T095"
+  },
+  {
+   "q": "Remove H&M from Kavya Knitwear's client list.",
+   "clauses": [
+    "delete",
+    "where"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T096"
+  },
+  {
+   "q": "Remove printing from Erode Print House's processes.",
+   "clauses": [
+    "delete",
+    "where"
+   ],
+   "set": "score",
+   "kind": "write",
+   "id": "S097"
+  },
+  {
+   "q": "Delete every skipped milestone on DL-2025-0007.",
+   "clauses": [
+    "delete",
+    "where"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T098"
+  },
+  {
+   "q": "Remove Tuticorin Freight Services from DL-2026-0030.",
+   "clauses": [
+    "delete",
+    "where"
+   ],
+   "set": "score",
+   "kind": "write",
+   "id": "S099"
+  },
+  {
+   "q": "Remove Rachel Kim from Pacific Outdoor Co's contacts.",
+   "clauses": [
+    "delete",
+    "where"
+   ],
+   "set": "train",
+   "kind": "write",
+   "id": "T100"
+  }
+ ]
+}
