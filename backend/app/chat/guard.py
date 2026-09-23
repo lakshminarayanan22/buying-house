@@ -27,8 +27,9 @@ class Kind(StrEnum):
     DELETE = "DELETE"
 
 
-# Business rows the chatbot may change. An allowlist, so a table added next month is
-# unreachable until somebody deliberately adds it here.
+# Business rows the chatbot may change — by UPDATE or DELETE. Creating rows is the app's job;
+# see the INSERT branch in check(). An allowlist, so a table added next month is unreachable
+# until somebody deliberately adds it here.
 WRITABLE = frozenset({
     "company", "contact", "company_process", "company_product",
     "company_certification", "company_client",
@@ -120,7 +121,14 @@ def check(sql: str, *, allow_write: bool) -> Checked:
         )
 
     if isinstance(node, exp.Insert):
-        kind = Kind.INSERT
+        # Creating a record is done in the app, not here: a form asks for every field and
+        # checks it, where a dictated INSERT quietly leaves half of them empty. The chat flow
+        # catches most of these before a model is called (app/chat/newrecord.py); this is the
+        # backstop for a request phrased in a way no keyword list anticipated.
+        raise SqlRejected(
+            "New records are created in the app rather than here — the form asks for every "
+            "field and checks it. I can change or remove records that already exist."
+        )
     elif isinstance(node, exp.Update):
         kind = Kind.UPDATE
     elif isinstance(node, exp.Delete):

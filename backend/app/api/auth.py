@@ -9,6 +9,7 @@ Two ways through the door, one account behind it:
 
 Both refuse anything but ACTIVE, and disabling someone on the Team page closes both at once.
 """
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session

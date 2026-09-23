@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
-from app.chat import guard
+from app.chat import guard, newrecord
 from app.chat.llm import chat_model, is_stub, sql_model, uses_xiyan
 from app.chat.state import Category, ChatState
 from app.chat.tools import find_company, readonly_session, run_select
@@ -107,6 +107,8 @@ def _data_notes() -> str:
 - Select readable columns (deal.deal_no, deal.title, company.name), not id columns.
 - When a query mixes aggregates (SUM, COUNT) with other columns, GROUP BY those columns.
 - Wrap totals in COALESCE(SUM(...), 0), so "none yet" comes back as 0 rather than a blank.
+- Never write INSERT. New companies, deals, contacts and follow-ups are created in the app,
+  on a form; only UPDATE and DELETE of existing rows happen here.
 """
 
 
@@ -198,6 +200,17 @@ def database(state: ChatState) -> ChatState:
 
     if is_stub():
         return _database_stub(state)
+
+    # "Add a contact at Kavya" is not a query. Answer it with directions to the screen that does
+    # it properly, before spending a model call on SQL the guard would refuse anyway.
+    if newrecord.asks_to_create(question):
+        db = readonly_session()
+        try:
+            state["answer"] = newrecord.handoff(question, db)
+        finally:
+            db.close()
+        state.setdefault("trace", []).append("new record: sent to the app")
+        return state
 
     writer = sql_model(max_tokens=1200)
     prompt = _sql_prompt(_with_context(state, question), is_admin=is_admin)

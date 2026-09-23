@@ -28,7 +28,6 @@ from app.services import deals as svc
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 
-
 def _ref(db: Session, domain: D, text: str | None, label: str) -> ReferenceItem | None:
     if not text:
         return None

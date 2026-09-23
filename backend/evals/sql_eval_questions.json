@@ -1,5 +1,5 @@
 {
- "about": "Questions for the SQL writer, asked against the ecolink_eval database (scripts/seed_eval_db.py) — never the real one. 'Today' in that database is fixed at 15 September 2026, so time-sensitive questions name their dates instead of saying 'overdue' or 'this month', and a correct query returns the same rows next year. XiYanSQL drafts a query for every question; a person corrects each draft by checking the rows it returns, and only corrected drafts are trained on or scored against. set='score' marks the 40 questions held out for measuring models: never train on them, and for the fairest comparison correct them without leaning on the draft. Writes (kind='write') are asked with admin permission and must satisfy app/chat/guard.py: one statement, only business tables, and UPDATE/DELETE always with a WHERE. INSERTs must supply id = gen_random_uuid() — no table defaults its id — while created_at/updated_at fill themselves. A deal's value is the BUYER leg's value, never the sum of every leg; when a commission rate changes, the commission amount changes with it.",
+ "about": "Questions for the SQL writer, asked against the ecolink_eval database (scripts/seed_eval_db.py) — never the real one. 'Today' in that database is fixed at 15 September 2026, so time-sensitive questions name their dates instead of saying 'overdue' or 'this month', and a correct query returns the same rows next year. XiYanSQL drafts a query for every question; a person corrects each draft by checking the rows it returns, and only corrected drafts are trained on or scored against. set='score' marks the 40 questions held out for measuring models: never train on them, and for the fairest comparison correct them without leaning on the draft. Writes (kind='write') are asked with admin permission and must satisfy app/chat/guard.py: one statement, only business tables, and UPDATE/DELETE always with a WHERE. kind='create' questions are NOT for writing SQL: creating records is done in the app, on a form, so the assistant answers them with directions to the right screen (app/chat/newrecord.py) and the guard refuses any INSERT. They are here as examples the detection must catch. A deal's value is the BUYER leg's value, never the sum of every leg; when a commission rate changes, the commission amount changes with it.",
  "database": "ecolink_eval",
  "today": "2026-09-15",
  "questions": [
@@ -822,101 +822,112 @@
   {
    "q": "Add a contact at Chittagong Denim Ltd: Arif Chowdhury, production manager, arif@ctgdenim.example.",
    "clauses": [
-    "insert"
+    "create intent"
    ],
    "set": "score",
-   "kind": "write",
-   "id": "S081"
+   "kind": "create",
+   "id": "S081",
+   "expect": "no SQL — directions to the screen that creates this record"
   },
   {
    "q": "Record that Saigon Garment Co now holds GOTS certification, reference GOTS-VN-3310.",
    "clauses": [
-    "insert"
+    "create intent"
    ],
    "set": "score",
-   "kind": "write",
-   "id": "S082"
+   "kind": "create",
+   "id": "S082",
+   "expect": "no SQL — directions to the screen that creates this record"
   },
   {
    "q": "Add Zara as a current client of Orient Fabric Processors.",
    "clauses": [
-    "insert"
+    "create intent"
    ],
    "set": "train",
-   "kind": "write",
-   "id": "T083"
+   "kind": "create",
+   "id": "T083",
+   "expect": "no SQL — directions to the screen that creates this record"
   },
   {
    "q": "Add a milestone 'Lab test report received' to DL-2026-0015, planned for 1 November 2026.",
    "clauses": [
-    "insert"
+    "create intent"
    ],
    "set": "score",
-   "kind": "write",
-   "id": "S084"
+   "kind": "create",
+   "id": "S084",
+   "expect": "no SQL — directions to the screen that creates this record"
   },
   {
    "q": "Add knitting to Chittagong Denim Ltd's processes, with a minimum order of 1,000 kg and a lead time of 20 days.",
    "clauses": [
-    "insert"
+    "create intent"
    ],
    "set": "train",
-   "kind": "write",
-   "id": "T085"
+   "kind": "create",
+   "id": "T085",
+   "expect": "no SQL — directions to the screen that creates this record"
   },
   {
    "q": "Record that Sakura Lifestyle KK buys T-shirts as well.",
    "clauses": [
-    "insert"
+    "create intent"
    ],
    "set": "train",
-   "kind": "write",
-   "id": "T086"
+   "kind": "create",
+   "id": "T086",
+   "expect": "no SQL — directions to the screen that creates this record"
   },
   {
    "q": "Add Chennai Testing Labs to DL-2026-0015 as a testing party (role OTHER) for a flat 1,500, with no commission.",
    "clauses": [
-    "insert"
+    "create intent"
    ],
    "set": "train",
-   "kind": "write",
-   "id": "T087"
+   "kind": "create",
+   "id": "T087",
+   "expect": "no SQL — directions to the screen that creates this record"
   },
   {
    "q": "Add a contact for Gulf Uniforms LLC: Fatima Al Mansoori, finance, fatima@gulfuniforms.example.",
    "clauses": [
-    "insert"
+    "create intent"
    ],
    "set": "train",
-   "kind": "write",
-   "id": "T088"
+   "kind": "create",
+   "id": "T088",
+   "expect": "no SQL — directions to the screen that creates this record"
   },
   {
    "q": "Add OEKO-TEX Standard 100 to Panipat Recycled Fibres' certifications.",
    "clauses": [
-    "insert"
+    "create intent"
    ],
    "set": "score",
-   "kind": "write",
-   "id": "S089"
+   "kind": "create",
+   "id": "S089",
+   "expect": "no SQL — directions to the screen that creates this record"
   },
   {
    "q": "Add a 'Final inspection' milestone to DL-2026-0034, planned for 20 October 2026.",
    "clauses": [
-    "insert"
+    "create intent"
    ],
    "set": "train",
-   "kind": "write",
-   "id": "T090"
+   "kind": "create",
+   "id": "T090",
+   "expect": "no SQL — directions to the screen that creates this record"
   },
   {
    "q": "Add Primark as a past client of Dhaka Knit Composite.",
    "clauses": [
-    "insert"
+    "create intent"
    ],
    "set": "train",
-   "kind": "write",
-   "id": "T091"
+   "kind": "create",
+   "id": "T091",
+   "expect": "no SQL — directions to the screen that creates this record"
   },
   {
    "q": "Remove Surat Weaving Works' ISO 9001 certification.",

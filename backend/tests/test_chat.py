@@ -163,6 +163,60 @@ def test_the_stub_router_does_not_guess_when_nothing_matches():
     assert result.confidence < 0.7
 
 
+# ------------------------------------------------------ creating records is the app's job
+def test_a_request_to_create_a_record_is_recognised():
+    from app.chat import newrecord
+
+    for question in [
+        "Add a contact at Chittagong Denim Ltd: Arif Chowdhury, production manager.",
+        "Create a new company for the Tiruppur knitter we met.",
+        "Register Saigon Garment Co as a supplier",
+        "Set up a new deal for the Hanse programme",
+        "add another follow-up to DL-2026-0015",
+        "Please onboard a new mill in Karur",
+    ]:
+        assert newrecord.asks_to_create(question), question
+
+
+def test_questions_about_existing_records_are_not_mistaken_for_creation():
+    """The expensive false positive: a normal question answered with directions instead of data."""
+    from app.chat import newrecord
+
+    for question in [
+        "Add up the commission Erode owes us",
+        "Which deals were added in August?",
+        "How many companies do we have on file?",
+        "Who added the Kaimei deal?",
+        "What is recorded as Sri Vaari's payment terms?",
+        "List the contacts at Dhaka Knit Composite",
+        "Update the ship date on DL-2026-0020 to 20 October 2026",
+        "Delete the contact Meenakshi R at Coimbatore Compact Spinning",
+    ]:
+        assert not newrecord.asks_to_create(question), question
+
+
+def test_the_directions_name_the_right_screen():
+    from app.chat import newrecord
+
+    assert newrecord.target_of("add a contact at Kavya") == "contact"
+    assert newrecord.target_of("create a new deal for Hanse") == "deal"
+    assert newrecord.target_of("add a follow-up to DL-2026-0001") == "milestone"
+    assert newrecord.target_of("add GOTS to Panipat's certifications") == "capability"
+
+    answer = newrecord.handoff("Add a contact at Chittagong Denim Ltd")
+    assert "Add contact" in answer and "Contacts" in answer
+    # It has to say what it *can* still do, or it reads as a flat refusal.
+    assert "change or remove" in answer
+
+
+def test_the_guard_refuses_an_insert_whatever_the_model_wrote():
+    """The backstop: a phrasing the keyword check missed must still not create rows."""
+    with pytest.raises(guard.SqlRejected) as raised:
+        guard.check("INSERT INTO company (id, name) VALUES (gen_random_uuid(), 'X')",
+                    allow_write=True)
+    assert "created in the app" in str(raised.value)
+
+
 # --------------------------------------------------------------------- tools
 @pytest.fixture()
 def companies(db):
