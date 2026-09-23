@@ -2,7 +2,7 @@
 
     cd ~/buying-house/backend
     ollama serve &                                  # XiYanSQL has to be reachable
-    .venv/bin/streamlit run trainer/app.py
+    .venv/bin/streamlit run trainer/sql_trainer.py
 
 A separate tool from the Ecolink console: it runs locally, it is never deployed, and it only
 ever touches the evaluation database (`ecolink_eval`). Your real data is not reachable from here.
@@ -12,6 +12,14 @@ corrections become training data. What is different is that SQL can be *run*, so
 shows the rows a query returns rather than asking anyone to read SQL and imagine them.
 """
 from __future__ import annotations
+
+# Streamlit puts the script's own folder first on the import path, so a file called app.py in
+# here would shadow the backend's `app` package and break every import below. Hence the name —
+# and this line, which puts the backend itself on the path however streamlit was invoked.
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pandas as pd
 import streamlit as st
@@ -50,7 +58,7 @@ def show_result(result: runner.Result) -> None:
         if result.rows:
             st.caption(f"{len(result.rows)} row(s)" + (" — showing the first 200"
                                                        if result.truncated else ""))
-            st.dataframe(pd.DataFrame(result.rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(result.rows), width="stretch", hide_index=True)
         else:
             st.warning("Ran, but returned no rows. That is sometimes the right answer and "
                        "sometimes a missing filter — check against the database tab.")
@@ -63,9 +71,9 @@ def show_result(result: runner.Result) -> None:
             st.dataframe(pd.DataFrame([
                 {"field": col, "now": cell.get("before"), "after": cell.get("after")}
                 for col, cell in changes.items()
-            ]), use_container_width=True, hide_index=True)
+            ]), width="stretch", hide_index=True)
         elif entry.get("after"):
-            st.dataframe(pd.DataFrame([entry["after"]]), use_container_width=True,
+            st.dataframe(pd.DataFrame([entry["after"]]), width="stretch",
                          hide_index=True)
 
 
@@ -122,8 +130,9 @@ def review_tab() -> None:
                     try:
                         sql, _ = runner.draft(question["q"], is_admin=is_write)
                     except Exception as exc:                       # noqa: BLE001
-                        st.error(f"Could not reach the model: {exc}")
-                        st.stop()
+                        st.error(f"Could not reach the model: {exc}. Is `ollama serve` "
+                                 f"running in another tab?")
+                        return
                 row["draft_sql"] = sql
                 # Which model wrote it, recorded on the row: a dataset whose drafts came
                 # from two different models, unlabelled, cannot be read back later.
@@ -131,7 +140,9 @@ def review_tab() -> None:
                 row["final_sql"] = row["final_sql"] or sql
                 store.save(row)
                 st.rerun()
-            st.stop()
+            st.info("No draft yet for this question. The other tabs still work — the database "
+                    "browser is there to check answers against while you correct.")
+            return
 
         st.caption("XiYanSQL's draft")
         st.code(row["draft_sql"], language="sql")
@@ -194,7 +205,7 @@ def database_tab() -> None:
         st.caption(f"{count} rows")
         result = db.execute(text(f"SELECT * FROM {table} LIMIT 200"))
         frame = pd.DataFrame([dict(zip(result.keys(), r)) for r in result.fetchall()])
-        st.dataframe(frame.astype(str), use_container_width=True, hide_index=True, height=320)
+        st.dataframe(frame.astype(str), width="stretch", hide_index=True, height=320)
     finally:
         db.rollback()
         db.close()
@@ -221,8 +232,11 @@ def create_tab() -> None:
             if caught:
                 st.text(newrecord.handoff(question["q"], runner.eval_sessionmaker()()))
             else:
-                st.error("Not recognised as a request to create a record — this one would go "
-                         "to the SQL writer instead. Worth a phrase in app/chat/newrecord.py.")
+                st.error("Not recognised, so this one goes to the SQL writer. Nothing can be "
+                         "created — the guard refuses the INSERT — but the person gets a "
+                         "refusal rather than directions. Add a phrase to "
+                         "app/chat/newrecord.py if it is worth catching, and check it does not "
+                         "swallow the update phrasings that look similar.")
 
 
 # ============================================================================== export
@@ -244,7 +258,7 @@ def export_tab() -> None:
         st.dataframe(pd.DataFrame([{"id": r["id"], "status": r["status"],
                                     "question": r["question"][:70], "sql": r["final_sql"][:90]}
                                    for r in ready]),
-                     use_container_width=True, hide_index=True)
+                     width="stretch", hide_index=True)
 
 
 st.title("SQL Trainer")

@@ -82,7 +82,7 @@ def main() -> int:
 
     if not args.corrections.exists():
         print(f"No corrections yet at {args.corrections}. Correct some in the trainer first:\n"
-              f"  .venv/bin/streamlit run trainer/app.py")
+              f"  .venv/bin/streamlit run trainer/sql_trainer.py")
         return 1
 
     questions = {q["id"]: q for q in store.questions()}

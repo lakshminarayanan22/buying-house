@@ -181,7 +181,7 @@ trainer warns in its sidebar if this is not set.
 cd ~/buying-house/backend
 ollama serve &                                   # in its own tab
 .venv/bin/pip install -e '.[trainer]'            # streamlit + pandas, once
-.venv/bin/streamlit run trainer/app.py
+.venv/bin/streamlit run trainer/sql_trainer.py
 ```
 
 A local tool, never deployed, that only ever touches `ecolink_eval` — your real data is not

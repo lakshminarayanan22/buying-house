@@ -32,12 +32,12 @@ _ASKS_TO_CREATE = re.compile(
     rf"\b{_CREATE}\b\s+(?:{_ARTICLE}\s+)?[\w '’-]*?\b"
     r"(compan(?:y|ies)|supplier|buyer|mill|factory|contact|person|deal|programme|program|"
     r"party|leg|milestone|follow[- ]?up|task|certification|certificate|process|capability|"
-    r"product|client|document|file|note)\b",
+    r"product|client|document|file|note)(?:e?s)?\b",
     re.I,
 )
 _NOT_CREATING = re.compile(
     r"\b(?:add(?:ed|ing)?\s+up|was\s+added|were\s+added|been\s+added|who\s+added|"
-    r"how\s+many|which|what|list|show|report|when\s+(?:was|were))\b",
+    r"how\s+many|which|what|list|show|when\s+(?:was|were))\b",
     re.I,
 )
 

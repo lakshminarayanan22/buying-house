@@ -195,6 +195,26 @@ def test_questions_about_existing_records_are_not_mistaken_for_creation():
         assert not newrecord.asks_to_create(question), question
 
 
+def test_plural_phrasings_are_caught():
+    """"Add knitting to their processes" and "add GOTS to their certifications" are how people
+    actually write it; the singular-only pattern missed both."""
+    from app.chat import newrecord
+
+    assert newrecord.asks_to_create("Add knitting to Chittagong Denim Ltd's processes")
+    assert newrecord.asks_to_create("Add OEKO-TEX to Panipat Recycled Fibres' certifications")
+    assert newrecord.asks_to_create(
+        "Add a milestone 'Lab test report received' to DL-2026-0015")
+
+
+def test_record_that_stays_ambiguous_on_purpose():
+    """"Record that ..." introduces an update as often as a creation, so it is left to the
+    guard rather than guessed at here. Catching it must not swallow this update."""
+    from app.chat import newrecord
+
+    assert not newrecord.asks_to_create(
+        "The commission on DL-2026-0017 was invoiced on 16 September 2026 — record it.")
+
+
 def test_the_directions_name_the_right_screen():
     from app.chat import newrecord
 
