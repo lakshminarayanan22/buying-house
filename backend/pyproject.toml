@@ -51,6 +51,12 @@ dev = [
     "pytest>=8.1",
     "httpx>=0.27",
 ]
+# The local SQL trainer (trainer/app.py): a human-in-the-loop tool, run on the laptop and never
+# deployed. Kept out of the main dependencies so the server image carries no UI framework.
+trainer = [
+    "streamlit>=1.40",
+    "pandas>=2.2",
+]
 
 [tool.setuptools.packages.find]
 include = ["app*"]

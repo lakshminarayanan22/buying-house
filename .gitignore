@@ -15,3 +15,6 @@ build/
 # scripts/build_classifier_dataset.py, the adapter from a Modal run — and neither is small.
 backend/evals/training/
 artifacts/
+
+# Corrections in progress are committed (evals/sql_corrections.jsonl); the built dataset is not
+# — it regenerates from them with scripts/build_sql_dataset.py.
