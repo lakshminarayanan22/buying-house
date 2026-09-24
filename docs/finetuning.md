@@ -266,7 +266,7 @@ export anything. Free studios restart every 4 hours; the script checkpoints each
 Then export, download and register it exactly as for the router, and point the app at it:
 
 ```
-OLLAMA_SQL_MODEL=ecolink-sql
+OLLAMA_SQL_MODEL=ecolink-xiyan-sql
 ```
 
 ### 6. Keep it only if it wins

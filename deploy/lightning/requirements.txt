@@ -6,3 +6,6 @@ datasets==3.5.0
 peft==0.15.1
 trl==0.16.1
 accelerate==1.6.0
+# 4-bit (QLoRA) loading for the 7B SQL model. CUDA only — which is why training is not
+# done on the Mac.
+bitsandbytes==0.45.5
